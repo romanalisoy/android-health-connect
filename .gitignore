@@ -1,0 +1,9 @@
+#General
+/.idea/
+
+# API
+/api/.env
+/api/node_modules/
+/api/package-lock.json
+
+#APP
