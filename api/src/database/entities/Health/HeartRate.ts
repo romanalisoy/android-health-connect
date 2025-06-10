@@ -1,7 +1,6 @@
 import {
     Column,
     Entity,
-    ObjectIdColumn,
 } from "typeorm";
 import BaseEntity from "../BaseEntity";
 
