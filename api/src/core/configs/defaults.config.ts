@@ -1,0 +1,1 @@
+export const DECIMAL_PRECISION = { precision: 10, scale: 6 };

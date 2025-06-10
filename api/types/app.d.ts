@@ -24,6 +24,11 @@ declare global {
             limit(): number;
         }
     }
+
+    interface TimeZoneOffset {
+        id: string;
+        totalSeconds: number;
+    }
 }
 
 export {};
