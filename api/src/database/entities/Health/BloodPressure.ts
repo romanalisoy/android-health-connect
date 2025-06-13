@@ -7,6 +7,17 @@ import BaseEntity from "../BaseEntity";
 @Entity({
     name: 'BloodPressure',
 })
+
+class Systolic {
+    @Column()
+    inMillimetersOfMercury: number;
+}
+
+class Diastolic {
+    @Column()
+    inMillimetersOfMercury: number;
+}
+
 export class BloodPressure extends BaseEntity implements IModel {
     @Column(type => Systolic)
     systolic: Systolic;
@@ -19,14 +30,4 @@ export class BloodPressure extends BaseEntity implements IModel {
 
     @Column()
     measurementLocation: number;
-}
-
-class Systolic {
-    @Column()
-    inMillimetersOfMercury: number;
-}
-
-class Diastolic {
-    @Column()
-    inMillimetersOfMercury: number;
 }

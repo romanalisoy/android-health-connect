@@ -3,7 +3,7 @@ import {
     Column,
     CreateDateColumn,
     Entity,
-    ObjectIdColumn,
+    PrimaryGeneratedColumn,
     UpdateDateColumn
 } from "typeorm";
 
@@ -12,8 +12,8 @@ import {
     name: 'User',
 })
 export default class User extends BaseEntity implements IModel {
-    @ObjectIdColumn()
-    id!: string;
+    @PrimaryGeneratedColumn('uuid')
+    uuid!: string;
 
     @Column({type: 'text', unique: true})
     username: string;

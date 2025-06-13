@@ -37,6 +37,7 @@ const AppDataSourceConfigs: DataSourceOptions = {
     database: process.env.DB_NAME,
     username: process.env.DB_USERNAME,
     password: process.env.DB_PASSWORD,
+    authSource: process.env.DB_AUTH_SOURCE || "admin",
     synchronize: false,
     logging: false,
     ssl: false,

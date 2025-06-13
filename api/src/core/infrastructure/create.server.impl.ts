@@ -13,7 +13,7 @@ server.use((req, res, next) => {
     const originalJson = res.json;
     res.json = function (data) {
         data.time = Date.now() - startTime;
-        data.entity = `app.api.hrm.${(req.originalUrl.match(/^\/api\/v\d+\/([^\/]+)/)[1]).replace(/s$/, '')}`;
+        data.entity = `android.health-connect.api`;
         return originalJson.call(this, data);
     };
     next();
