@@ -1,6 +1,11 @@
 import {Routing} from "../../core/infrastructure/init.routes.impl";
 
-import {loginValidation, refreshTokenValidation, revokeTokenValidation} from "../validations/auth.validation";
+import {
+    loginValidation,
+    refreshTokenValidation,
+    revokeTokenValidation
+} from "../validations/auth.validation";
+
 import AuthController from "../controllers/auth.controller";
 
 const router: Routing = new Routing();
