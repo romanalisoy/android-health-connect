@@ -3,6 +3,7 @@ import {
     Entity,
 } from "typeorm";
 import BaseEntity from "../BaseEntity";
+import {SleepStage} from "../../../../types/health";
 
 @Entity({
     name: 'SleepSessions',
@@ -16,10 +17,4 @@ export default class SleepSession extends BaseEntity implements IModel {
 
     @Column()
     title: string | null;
-}
-
-export type SleepStage = {
-    stage: number;
-    startTime: string;
-    endTime: string;
 }

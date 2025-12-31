@@ -3,6 +3,7 @@ import {
     Entity,
 } from "typeorm";
 import BaseEntity from "../BaseEntity";
+import {SpeedSample} from "../../../../types/health";
 
 @Entity({
     name: 'Speeds',
@@ -10,15 +11,4 @@ import BaseEntity from "../BaseEntity";
 export default class Speed extends BaseEntity implements IModel {
     @Column()
     samples: SpeedSample[];
-}
-
-export interface SpeedSample {
-    speed: SpeedMeasurement;
-    time: string;
-}
-
-export interface SpeedMeasurement {
-    inMilesPerHour: number;
-    inMetersPerSecond: number;
-    inKilometersPerHour: number;
 }

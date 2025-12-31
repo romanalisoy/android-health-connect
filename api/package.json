@@ -7,7 +7,8 @@
     "start": "NODE_ENV=production node dist/index.js",
     "watch": "nodemon src/index.ts",
     "build": "tsc --build",
-    "setup": "node dist/core/scripts/setup.script.js"
+    "setup": "node dist/core/scripts/setup.script.js",
+    "create-admin": "node dist/core/scripts/create-admin.script.js"
   },
   "keywords": [
     "android",
@@ -19,18 +20,22 @@
   "license": "ISC",
   "dependencies": {
     "axios": "^1.8.2",
+    "bcrypt": "^6.0.0",
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "joi": "^17.13.3",
+    "jsonwebtoken": "^9.0.3",
     "mongodb": "^6.17.0",
     "reflect-metadata": "^0.2.2",
     "typeorm": "^0.3.20"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^1.4.11",
     "@types/multer-s3": "^3.0.3",
     "@types/node": "^20.17.6",

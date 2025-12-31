@@ -28,7 +28,9 @@ export function useRoutes(app: Application) {
 
     files.forEach(file => {
         const routeModule = require(path.join(routesPath, file)).default;
-        app.use(`/api/v${routeModule.apiVersion}/hrm/${routeModule.prefix}`, routeModule.router);
+        const basePath = `/api/v${routeModule.apiVersion}/${routeModule.prefix}`;
+        app.use(basePath, routeModule.router);
+        console.log(`Loaded routes: /api/v${routeModule.apiVersion}/${routeModule.prefix}`);
     });
 }
 

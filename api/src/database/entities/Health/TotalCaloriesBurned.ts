@@ -4,6 +4,7 @@ import {
     ObjectIdColumn,
 } from "typeorm";
 import BaseEntity from "../BaseEntity";
+import {CaloriesBurnedEnergy} from "../../../../types/health";
 
 @Entity({
     name: 'TotalCaloriesBurned',
@@ -14,11 +15,4 @@ export default class TotalCaloriesBurned extends BaseEntity implements IModel {
 
     @Column()
     energy: CaloriesBurnedEnergy;
-}
-
-export interface CaloriesBurnedEnergy {
-    inKilocalories: number;
-    inKilojoules: number;
-    inJoules: number;
-    inCalories: number;
 }

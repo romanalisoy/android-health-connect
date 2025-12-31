@@ -3,7 +3,8 @@ import {
     Column,
     CreateDateColumn,
     Entity,
-    PrimaryGeneratedColumn,
+    ObjectIdColumn,
+    PrimaryColumn,
     UpdateDateColumn
 } from "typeorm";
 
@@ -12,17 +13,21 @@ import {
     name: 'User',
 })
 export default class User extends BaseEntity implements IModel {
-    @PrimaryGeneratedColumn('uuid')
-    uuid!: string;
+    @Column()
+    @PrimaryColumn()
+    id!: string;
 
     @Column({type: 'text', unique: true})
-    username: string;
+    email: string;
 
     @Column({type: 'text'})
     password: string;
 
+    @Column({type: 'text', nullable: true})
+    fcmToken: string;
+
     @Column({type: 'text'})
-    fmcToken: string;
+    full_name: string;
 
     @CreateDateColumn()
     created_at: DateString;
