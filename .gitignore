@@ -1,5 +1,5 @@
 #General
-/.idea/
+*.idea/*
 
 # API
 /api/.env
@@ -7,3 +7,7 @@
 /api/package-lock.json
 
 #APP
+/api/dist/
+/api/.claude/settings.local.json
+/a.py
+/t.py
