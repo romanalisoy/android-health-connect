@@ -59,10 +59,10 @@ class HealthService {
     HealthDataType.BLOOD_PRESSURE_SYSTOLIC,
     HealthDataType.BLOOD_PRESSURE_DIASTOLIC,
     HealthDataType.BODY_TEMPERATURE,
-    HealthDataType.HEART_RATE,
-    HealthDataType.HEART_RATE_VARIABILITY_RMSSD,
     HealthDataType.BLOOD_OXYGEN,
     HealthDataType.RESPIRATORY_RATE,
+    HealthDataType.HEART_RATE,
+    HealthDataType.HEART_RATE_VARIABILITY_RMSSD,
     HealthDataType.RESTING_HEART_RATE,
   ];
 

@@ -1,6 +1,6 @@
-import 'package:dotted_border/dotted_border.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:vitalgate/core/theme/app_colors.dart';
@@ -8,7 +8,7 @@ import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:vitalgate/core/services/health_service.dart';
 import 'package:vitalgate/core/services/auth_service.dart';
 import 'package:vitalgate/core/services/sync_service.dart';
-import 'package:vitalgate/features/settings/screens/permissions_screen.dart';
+import 'package:vitalgate/features/profile/screens/profile_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -21,13 +21,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _syncInterval = 'Every 1 hour';
   String _historyRange = '1 week';
   bool _isSyncing = false;
-  bool _wantUploadOldHistory = false;
-  String? _selectedArchivePath;
-  String? _selectedArchiveName;
 
   // Sync state for button text
   SyncState _syncState = SyncState.idle;
   String _syncMessage = '';
+  bool _syncCancelled = false;
+
+  // User info and weather
+  UserInfo? _userInfo;
+  WeatherInfo? _weatherInfo;
+  bool _isLoadingUserInfo = true;
+  bool _isLoadingWeather = true;
 
   final HealthService _healthService = HealthService();
   final AuthService _authService = AuthService();
@@ -51,23 +55,104 @@ class _DashboardScreenState extends State<DashboardScreen> {
     '30 days',
   ];
 
+  // TEST: Historical data result
+  String? _historicalTestResult;
+
   @override
   void initState() {
     super.initState();
     _loadSettings();
     _initializeBackgroundSync();
+    _loadUserInfo();
+    _loadWeather();
+  }
+
+
+  /// Get greeting based on time of day
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 12) {
+      return 'Good morning,';
+    } else if (hour >= 12 && hour < 17) {
+      return 'Good afternoon,';
+    } else if (hour >= 17 && hour < 21) {
+      return 'Good evening,';
+    } else {
+      return 'Good night,';
+    }
+  }
+
+  /// Load user info from API
+  Future<void> _loadUserInfo() async {
+    final userInfo = await _authService.getUserInfo(forceRefresh: true);
+    if (mounted) {
+      setState(() {
+        _userInfo = userInfo;
+        _isLoadingUserInfo = false;
+      });
+    }
+  }
+
+  /// Refresh all data (pull-to-refresh)
+  Future<void> _refreshData() async {
+    await Future.wait([
+      _loadUserInfo(),
+      _loadWeather(),
+    ]);
+  }
+
+  /// Load weather data from API
+  Future<void> _loadWeather() async {
+    try {
+      // Check location permission
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          setState(() => _isLoadingWeather = false);
+        }
+        return;
+      }
+
+      // Get current position
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.low,
+          timeLimit: Duration(seconds: 10),
+        ),
+      );
+
+      // Fetch weather from API
+      final weatherInfo = await _authService.getWeather(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (mounted) {
+        setState(() {
+          _weatherInfo = weatherInfo;
+          _isLoadingWeather = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingWeather = false);
+      }
+    }
   }
 
   Future<void> _loadSettings() async {
     final interval = await _syncService.getSyncInterval();
     final range = await _syncService.getHistoryRange();
-    final wantOldHistory = await _syncService.getWantUploadOldHistory();
 
     if (mounted) {
       setState(() {
         _syncInterval = _syncIntervalOptions.contains(interval) ? interval : 'Every 1 hour';
         _historyRange = _historyRangeOptions.contains(range) ? range : '1 week';
-        _wantUploadOldHistory = wantOldHistory;
       });
     }
   }
@@ -75,31 +160,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _initializeBackgroundSync() async {
     await _syncService.initializeBackgroundSync();
     await _syncService.scheduleBackgroundSync();
-  }
-
-  Future<void> _pickArchiveFile() async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['zip'],
-      );
-
-      if (result != null && result.files.single.path != null) {
-        setState(() {
-          _selectedArchivePath = result.files.single.path;
-          _selectedArchiveName = result.files.single.name;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error picking file: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
   }
 
   void _updateSyncState(SyncState state, String message, int current, int total) {
@@ -130,11 +190,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  void _handleStopSync() {
+    // Cancel the sync in SyncService
+    _syncService.cancelSync();
+    setState(() {
+      _syncCancelled = true;
+      _syncMessage = 'Cancelling...';
+    });
+  }
+
+  void _onSyncCancelled() {
+    if (mounted) {
+      setState(() {
+        _isSyncing = false;
+        _syncState = SyncState.idle;
+        _syncMessage = '';
+        _syncCancelled = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sync cancelled'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+  }
+
   Future<void> _handleSync() async {
     if (_isSyncing) return;
 
     setState(() {
       _isSyncing = true;
+      _syncCancelled = false;
       _syncState = SyncState.requestingPermissions;
       _syncMessage = '';
     });
@@ -151,6 +238,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
       }
 
+      // Check if cancelled
+      if (_syncCancelled) {
+        _onSyncCancelled();
+        return;
+      }
+
       // 2. Request ALL Health Connect permissions via native code
       final healthResult = await _healthService.requestAllPermissionsNative();
 
@@ -163,6 +256,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           );
         }
+      }
+
+      // Check if cancelled
+      if (_syncCancelled) {
+        _onSyncCancelled();
+        return;
       }
 
       // 3. Submit FCM token to server
@@ -181,40 +280,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
       }
 
-      // 4. Upload archive file if selected
-      if (_wantUploadOldHistory && _selectedArchivePath != null) {
-        setState(() {
-          _syncState = SyncState.uploadingArchive;
-          _syncMessage = 'Uploading archive...';
-        });
-
-        final archiveUploaded = await _syncService.uploadArchiveFile(
-          filePath: _selectedArchivePath!,
-        );
-        if (mounted) {
-          if (archiveUploaded) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Archive uploaded successfully'),
-                backgroundColor: Colors.green,
-              ),
-            );
-            setState(() {
-              _selectedArchivePath = null;
-              _selectedArchiveName = null;
-            });
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Failed to upload archive'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        }
+      // Check if cancelled
+      if (_syncCancelled) {
+        _onSyncCancelled();
+        return;
       }
 
-      // 5. Perform health data sync with progress callback
+      // 4. Perform health data sync with progress callback
       setState(() {
         _syncState = SyncState.syncingData;
         _syncMessage = 'Starting sync...';
@@ -253,7 +325,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     } finally {
       if (mounted) {
-        setState(() => _isSyncing = false);
+        setState(() {
+          _isSyncing = false;
+          _syncCancelled = false;
+        });
         // Reset to idle after a short delay
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) {
@@ -323,7 +398,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const PermissionsScreen(),
+                              builder: (context) => const ProfileScreen(),
                             ),
                           );
                         },
@@ -334,9 +409,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
 
                 Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.only(bottom: 140), // Space for fixed footer
-                    children: [
+                  child: RefreshIndicator(
+                    onRefresh: _refreshData,
+                    color: AppColors.primary,
+                    child: ListView(
+                      padding: const EdgeInsets.only(bottom: 140), // Space for fixed footer
+                      children: [
                       // Greeting
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
@@ -344,7 +422,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Good afternoon,',
+                              _getGreeting(),
                               style: GoogleFonts.inter(
                                 fontSize: 36,
                                 fontWeight: FontWeight.w700,
@@ -357,16 +435,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               shaderCallback: (bounds) => const LinearGradient(
                                 colors: [AppColors.primary, AppColors.primaryDark],
                               ).createShader(bounds),
-                              child: Text(
-                                'Eldar',
-                                style: GoogleFonts.inter(
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white, // Masked
-                                  height: 1.1,
-                                  letterSpacing: -1,
-                                ),
-                              ),
+                              child: _isLoadingUserInfo
+                                  ? SizedBox(
+                                      height: 40,
+                                      child: LoadingAnimationWidget.progressiveDots(
+                                        color: AppColors.primary,
+                                        size: 36,
+                                      ),
+                                    )
+                                  : Text(
+                                      _userInfo?.fullName ?? 'User',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 36,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white, // Masked
+                                        height: 1.1,
+                                        letterSpacing: -1,
+                                      ),
+                                    ),
                             ),
                             const SizedBox(height: 8),
                             Text(
@@ -400,114 +486,140 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               color: isDark ? Colors.white10 : Colors.black12,
                             ),
                           ),
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              // If width is less than 340, use column layout
-                              if (constraints.maxWidth < 340) {
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // First row: Temperature + Weather
-                                    Row(
+                          child: _isLoadingWeather
+                              ? Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 4),
+                                    child: LoadingAnimationWidget.progressiveDots(
+                                      color: AppColors.primary,
+                                      size: 24,
+                                    ),
+                                  ),
+                                )
+                              : _weatherInfo == null
+                                  ? Row(
                                       children: [
-                                        Icon(Icons.thermostat, color: AppColors.primary, size: 20),
-                                        const SizedBox(width: 4),
+                                        Icon(Icons.cloud_off, color: mutedColor, size: 20),
+                                        const SizedBox(width: 8),
                                         Text(
-                                          '24°C',
+                                          'Weather unavailable',
                                           style: GoogleFonts.inter(
                                             fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: isDark ? Colors.grey[200] : Colors.blueGrey[700],
+                                            fontWeight: FontWeight.w500,
+                                            color: mutedColor,
                                           ),
                                         ),
-                                        Container(
+                                      ],
+                                    )
+                                  : LayoutBuilder(
+                                      builder: (context, constraints) {
+                                        // Weather content widgets
+                                        final tempWidget = Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.thermostat, color: AppColors.primary, size: 20),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              _weatherInfo!.temperature,
+                                              style: GoogleFonts.inter(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                color: isDark ? Colors.grey[200] : Colors.blueGrey[700],
+                                              ),
+                                            ),
+                                          ],
+                                        );
+
+                                        final weatherWidget = Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            if (_weatherInfo!.iconUrl.isNotEmpty)
+                                              CachedNetworkImage(
+                                                imageUrl: _weatherInfo!.iconUrl,
+                                                width: 24,
+                                                height: 24,
+                                                placeholder: (context, url) => const SizedBox(
+                                                  width: 24,
+                                                  height: 24,
+                                                ),
+                                                errorWidget: (context, url, error) => Icon(
+                                                  Icons.cloud,
+                                                  size: 20,
+                                                  color: AppColors.primary,
+                                                ),
+                                              ),
+                                            const SizedBox(width: 4),
+                                            Flexible(
+                                              child: Text(
+                                                _weatherInfo!.weather,
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: mutedColor,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        );
+
+                                        final locationWidget = Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.location_on, size: 16, color: mutedColor),
+                                            const SizedBox(width: 4),
+                                            Flexible(
+                                              child: Text(
+                                                _weatherInfo!.city.toUpperCase(),
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: mutedColor,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        );
+
+                                        final divider = Container(
                                           height: 16,
                                           width: 1,
                                           color: isDark ? Colors.white24 : Colors.black12,
                                           margin: const EdgeInsets.symmetric(horizontal: 12),
-                                        ),
-                                        Expanded(
-                                          child: Text(
-                                            'Cloudy, windy',
-                                            style: GoogleFonts.inter(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w500,
-                                              color: mutedColor,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
+                                        );
+
+                                        // If width is less than 340, use column layout
+                                        if (constraints.maxWidth < 340) {
+                                          return Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  tempWidget,
+                                                  divider,
+                                                  Expanded(child: weatherWidget),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 8),
+                                              locationWidget,
+                                            ],
+                                          );
+                                        }
+
+                                        // Wide layout: all in one row
+                                        return Row(
+                                          children: [
+                                            tempWidget,
+                                            divider,
+                                            Expanded(child: weatherWidget),
+                                            divider,
+                                            locationWidget,
+                                          ],
+                                        );
+                                      },
                                     ),
-                                    const SizedBox(height: 8),
-                                    // Second row: Location
-                                    Row(
-                                      children: [
-                                        Icon(Icons.location_on, size: 16, color: mutedColor),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          'SAN FRANCISCO',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: mutedColor,
-                                            letterSpacing: 0.5,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                );
-                              }
-                              // Wide layout: all in one row
-                              return Row(
-                                children: [
-                                  Icon(Icons.thermostat, color: AppColors.primary, size: 20),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '24°C',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: isDark ? Colors.grey[200] : Colors.blueGrey[700],
-                                    ),
-                                  ),
-                                  Container(
-                                    height: 16,
-                                    width: 1,
-                                    color: isDark ? Colors.white24 : Colors.black12,
-                                    margin: const EdgeInsets.symmetric(horizontal: 12),
-                                  ),
-                                  Expanded(
-                                    child: Text(
-                                      'Cloudy, windy',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                        color: mutedColor,
-                                      ),
-                                    ),
-                                  ),
-                                  Container(
-                                    height: 16,
-                                    width: 1,
-                                    color: isDark ? Colors.white24 : Colors.black12,
-                                    margin: const EdgeInsets.symmetric(horizontal: 12),
-                                  ),
-                                  Icon(Icons.location_on, size: 16, color: mutedColor),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'SAN FRANCISCO',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: mutedColor,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
                         ),
                       ),
 
@@ -533,6 +645,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       
                       const SizedBox(height: 20),
+
+                      // TEST: Historical Data Result
+                      if (_historicalTestResult != null)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'TEST: Weight data from Jan 20, 2025',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.orange,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _historicalTestResult!,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: textColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
 
                       // Form Sections
                       Padding(
@@ -571,151 +718,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               textColor: textColor,
                               borderColor: isDark ? Colors.white10 : Colors.black12,
                             ),
-
-                            const SizedBox(height: 20),
-
-                            // Upload Old History Checkbox
-                            InkWell(
-                              onTap: () {
-                                setState(() => _wantUploadOldHistory = !_wantUploadOldHistory);
-                                _syncService.setWantUploadOldHistory(!_wantUploadOldHistory);
-                              },
-                              borderRadius: BorderRadius.circular(8),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 22,
-                                      height: 22,
-                                      decoration: BoxDecoration(
-                                        color: _wantUploadOldHistory ? AppColors.primary : Colors.transparent,
-                                        border: Border.all(
-                                          color: _wantUploadOldHistory ? AppColors.primary : mutedColor,
-                                          width: 2,
-                                        ),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: _wantUploadOldHistory
-                                          ? const Icon(Icons.check, size: 16, color: Colors.white)
-                                          : null,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      'I want to upload old history',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: textColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-
-                            // Large History Alert - only show when checkbox is checked
-                            if (_wantUploadOldHistory) ...[
-                              const SizedBox(height: 16),
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withOpacity(0.05),
-                                  border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Icon(Icons.info_outline, color: AppColors.primary, size: 20),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Large History Detected',
-                                            style: GoogleFonts.inter(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 14,
-                                              color: textColor,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            'Syncing more than 30 days requires a local archive file to avoid API rate limits.',
-                                            style: GoogleFonts.inter(
-                                              fontSize: 12,
-                                              color: mutedColor,
-                                              height: 1.5,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              const SizedBox(height: 12),
-
-                              // Upload Area - File Picker
-                              DottedBorder(
-                                color: AppColors.primary.withOpacity(0.3),
-                                strokeWidth: 2,
-                                borderType: BorderType.RRect,
-                                radius: const Radius.circular(12),
-                                dashPattern: const [6, 6],
-                                child: Container(
-                                  height: 112,
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(
-                                    color: isDark ? Colors.black12 : const Color(0xfff8fafc).withOpacity(0.5),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: InkWell(
-                                    onTap: _pickArchiveFile,
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          _selectedArchiveName != null ? Icons.check_circle : Icons.upload_file,
-                                          size: 36,
-                                          color: _selectedArchiveName != null ? Colors.green : AppColors.primary,
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          _selectedArchiveName ?? 'Click to upload archive',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500,
-                                            color: _selectedArchiveName != null
-                                                ? Colors.green
-                                                : (isDark ? Colors.grey[300] : Colors.blueGrey[700]),
-                                          ),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'ZIP ONLY (MAX. 50MB)',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
-                                            color: mutedColor,
-                                            letterSpacing: 0.5,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
                           ],
                         ),
                       ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -741,101 +748,120 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 child: Column(
                   children: [
-                    Container(
-                      height: 56,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [AppColors.primary, AppColors.primaryDark],
-                        ),
-                        borderRadius: BorderRadius.circular(16), // xl
-                        boxShadow: [
-                           BoxShadow(
-                             color: AppColors.primary.withOpacity(0.4),
-                             blurRadius: 20,
-                             offset: const Offset(0, 4),
-                           ),
-                        ],
-                      ),
-                      child: ElevatedButton(
-                        onPressed: _isSyncing ? null : _handleSync,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _isSyncing
-                                ? const SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : Icon(
-                                    _syncState == SyncState.completed
-                                        ? Icons.check_circle
-                                        : _syncState == SyncState.error
-                                            ? Icons.error_outline
-                                            : Icons.sync,
-                                    color: Colors.white,
-                                  ),
-                            const SizedBox(width: 12),
-                            Flexible(
-                              child: Text(
-                                _getSyncButtonText(),
-                                style: GoogleFonts.inter(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
+                    // Sync button row with optional stop button
+                    Row(
+                      children: [
+                        // Sync Now button (70% when syncing, 100% otherwise)
+                        Expanded(
+                          flex: _isSyncing ? 7 : 10,
+                          child: Container(
+                            height: 56,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [AppColors.primary, AppColors.primaryDark],
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primary.withOpacity(0.4),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 4),
                                 ),
-                                overflow: TextOverflow.ellipsis,
+                              ],
+                            ),
+                            child: ElevatedButton(
+                              onPressed: _isSyncing ? null : _handleSync,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  _isSyncing
+                                      ? const SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : Icon(
+                                          _syncState == SyncState.completed
+                                              ? Icons.check_circle
+                                              : _syncState == SyncState.error
+                                                  ? Icons.error_outline
+                                                  : Icons.sync,
+                                          color: Colors.white,
+                                        ),
+                                  const SizedBox(width: 12),
+                                  Flexible(
+                                    child: Text(
+                                      _getSyncButtonText(),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
+                          ),
                         ),
-                      ),
+                        // Stop button (30% when syncing)
+                        if (_isSyncing) ...[
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 3,
+                            child: Container(
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.red.withOpacity(0.4),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: ElevatedButton(
+                                onPressed: _handleStopSync,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  shadowColor: Colors.transparent,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                ),
+                                child: const Icon(
+                                  Icons.stop,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 20),
+                    // API Status row (centered)
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Row(
-                          children: [
-                            LoadingAnimationWidget.beat(color: Colors.greenAccent, size: 10), // emerald -> greenAccent
-                            const SizedBox(width: 6),
-                            Text(
-                              'API Status: Online',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: mutedColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                             // Logout stub
-                             Navigator.of(context).pop(); 
-                          },
-                          child: Row(
-                            children: [
-                              Icon(Icons.logout, size: 18, color: mutedColor),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Logout',
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: mutedColor,
-                                ),
-                              ),
-                            ],
+                        LoadingAnimationWidget.beat(color: Colors.greenAccent, size: 10),
+                        const SizedBox(width: 6),
+                        Text(
+                          'API Status: Online',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: mutedColor,
                           ),
                         ),
                       ],

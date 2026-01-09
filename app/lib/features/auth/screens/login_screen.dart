@@ -127,11 +127,12 @@ class _LoginScreenState extends State<LoginScreen> {
       _showError('Error requesting permissions: $e');
     }
     
-    // Navigate to Dashboard
+    // Navigate to Dashboard and clear entire navigation stack
     if (mounted) {
-       Navigator.pushReplacement(
-         context, 
-         MaterialPageRoute(builder: (context) => const DashboardScreen())
+       Navigator.pushAndRemoveUntil(
+         context,
+         MaterialPageRoute(builder: (context) => const DashboardScreen()),
+         (route) => false, // Remove all previous routes (including HostSelectionScreen)
        );
     }
     

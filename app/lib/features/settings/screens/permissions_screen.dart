@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:vitalgate/core/theme/app_colors.dart';
-import 'package:vitalgate/core/services/health_service.dart';
+import 'package:vitalgate/core/services/permission_service.dart';
 
 class PermissionsScreen extends StatefulWidget {
   const PermissionsScreen({super.key});
@@ -12,14 +11,8 @@ class PermissionsScreen extends StatefulWidget {
 }
 
 class _PermissionsScreenState extends State<PermissionsScreen> {
-  final HealthService _healthService = HealthService();
   bool _isLoading = true;
-  Map<String, List<Map<String, dynamic>>> _groupedPermissions = {};
-
-  // System permissions status
-  bool _notificationGranted = false;
-  bool _locationGranted = false;
-  bool _storageGranted = false;
+  Map<String, List<PermissionInfo>> _groupedPermissions = {};
 
   @override
   void initState() {
@@ -31,21 +24,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Load Health Connect permissions
-      final permissions = await _healthService.getPermissionsList();
-
-      // Group by category
-      final grouped = <String, List<Map<String, dynamic>>>{};
-      for (final perm in permissions) {
-        final category = perm['category'] as String;
-        grouped.putIfAbsent(category, () => []);
-        grouped[category]!.add(perm);
-      }
-
-      // Load system permissions
-      _notificationGranted = await Permission.notification.isGranted;
-      _locationGranted = await Permission.location.isGranted;
-      _storageGranted = await Permission.storage.isGranted;
+      final grouped = await PermissionService.getGroupedPermissions();
 
       setState(() {
         _groupedPermissions = grouped;
@@ -121,7 +100,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                         children: [
                           // Description
                           Text(
-                            'Review the data access permissions for VitalGate. These permissions are required to sync your metrics to the API.',
+                            'Review the data access permissions for VitalGate. These permissions are dynamically read from the Android system.',
                             style: GoogleFonts.inter(
                               fontSize: 14,
                               color: mutedColor,
@@ -130,7 +109,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                           ),
                           const SizedBox(height: 24),
 
-                          // Health Data Permissions
+                          // Permission Sections
                           ..._groupedPermissions.entries.map((entry) {
                             return _buildPermissionSection(
                               title: entry.key,
@@ -142,17 +121,6 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                               isDark: isDark,
                             );
                           }),
-
-                          // System Permissions
-                          _buildSystemPermissionsSection(
-                            surfaceColor: surfaceColor,
-                            textColor: textColor,
-                            mutedColor: mutedColor,
-                            borderColor: borderColor,
-                            isDark: isDark,
-                          ),
-
-                          const SizedBox(height: 24),
 
                           // Privacy Info Card
                           Container(
@@ -226,7 +194,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 
   Widget _buildPermissionSection({
     required String title,
-    required List<Map<String, dynamic>> permissions,
+    required List<PermissionInfo> permissions,
     required Color surfaceColor,
     required Color textColor,
     required Color mutedColor,
@@ -238,14 +206,28 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 12),
-          child: Text(
-            title.toUpperCase(),
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: mutedColor,
-              letterSpacing: 0.5,
-            ),
+          child: Row(
+            children: [
+              Text(
+                title.toUpperCase(),
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: mutedColor,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const Spacer(),
+              // Show count of granted permissions
+              Text(
+                '${permissions.where((p) => p.isGranted).length}/${permissions.length}',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
           ),
         ),
         Container(
@@ -266,94 +248,6 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
               final index = entry.key;
               final perm = entry.value;
               final isLast = index == permissions.length - 1;
-              final granted = perm['granted'] as bool? ?? false;
-
-              return Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: isLast
-                      ? null
-                      : Border(
-                          bottom: BorderSide(
-                            color: isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFF1F5F9),
-                          ),
-                        ),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        perm['name'] as String? ?? '',
-                        style: GoogleFonts.inter(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: textColor,
-                        ),
-                      ),
-                    ),
-                    Icon(
-                      granted ? Icons.check_circle : Icons.cancel,
-                      color: granted ? Colors.green : Colors.red.withOpacity(0.6),
-                      size: 20,
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-        const SizedBox(height: 24),
-      ],
-    );
-  }
-
-  Widget _buildSystemPermissionsSection({
-    required Color surfaceColor,
-    required Color textColor,
-    required Color mutedColor,
-    required Color borderColor,
-    required bool isDark,
-  }) {
-    final systemPermissions = [
-      {'name': 'Notifications', 'description': 'Sync status updates', 'granted': _notificationGranted},
-      {'name': 'Location', 'description': 'Local weather data', 'granted': _locationGranted},
-      {'name': 'Storage', 'description': 'Required for backups', 'granted': _storageGranted},
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 12),
-          child: Text(
-            'SYSTEM & STORAGE',
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: mutedColor,
-              letterSpacing: 0.5,
-            ),
-          ),
-        ),
-        Container(
-          decoration: BoxDecoration(
-            color: surfaceColor,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: borderColor),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            children: systemPermissions.asMap().entries.map((entry) {
-              final index = entry.key;
-              final perm = entry.value;
-              final isLast = index == systemPermissions.length - 1;
-              final granted = perm['granted'] as bool;
 
               return Container(
                 padding: const EdgeInsets.all(16),
@@ -373,27 +267,29 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            perm['name'] as String,
+                            perm.shortName,
                             style: GoogleFonts.inter(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
                               color: textColor,
                             ),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            perm['description'] as String,
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: mutedColor,
+                          if (perm.protectionLevel != null) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              perm.protectionLevel!,
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: mutedColor.withOpacity(0.7),
+                              ),
                             ),
-                          ),
+                          ],
                         ],
                       ),
                     ),
                     Icon(
-                      granted ? Icons.check_circle : Icons.cancel,
-                      color: granted ? Colors.green : Colors.red.withOpacity(0.6),
+                      perm.isGranted ? Icons.check_circle : Icons.cancel,
+                      color: perm.isGranted ? Colors.green : Colors.red.withOpacity(0.6),
                       size: 20,
                     ),
                   ],

@@ -1,0 +1,24 @@
+services:
+  api:
+    image: vitalgate
+    build:
+      context: .
+      dockerfile: ./api/Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./api/.env
+    restart: always
+    volumes:
+      - ./api/public:/usr/app/public
+
+#  db:
+#    image: mongo
+#    restart: always
+#    ports:
+#      - "27017:27017"
+#    volumes:
+#      - ./db:/data/db
+#    environment:
+#      MONGO_INITDB_ROOT_USERNAME: root
+#      MONGO_INITDB_ROOT_PASSWORD: example

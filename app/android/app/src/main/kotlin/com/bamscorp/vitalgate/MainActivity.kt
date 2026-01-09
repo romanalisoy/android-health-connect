@@ -1,7 +1,12 @@
 package com.bamscorp.vitalgate
 
+import android.content.pm.PackageInfo
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import androidx.core.content.ContextCompat
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.HealthConnectFeatures
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
@@ -15,62 +20,69 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import kotlin.reflect.KClass
 
+@Suppress("OPT_IN_USAGE", "OPT_IN_USAGE_ERROR")
 class MainActivity : FlutterFragmentActivity() {
     private val CHANNEL = "com.bamscorp.vitalgate/health_connect"
+    private val PERMISSIONS_CHANNEL = "app/permissions"
     private var pendingResult: MethodChannel.Result? = null
     private lateinit var healthConnectClient: HealthConnectClient
 
-    // Permission definitions with display names and categories
+    // Permission definitions with display names, categories, and API record types
     private val permissionDefinitions = listOf(
         // Heart & Vitals
-        PermissionDef("heart_rate", "Heart Rate", "Heart & Vitals", HealthPermission.getReadPermission(HeartRateRecord::class)),
-        PermissionDef("heart_rate_variability", "Heart Rate Variability", "Heart & Vitals", HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class)),
-        PermissionDef("resting_heart_rate", "Resting Heart Rate", "Heart & Vitals", HealthPermission.getReadPermission(RestingHeartRateRecord::class)),
-        PermissionDef("blood_pressure", "Blood Pressure", "Heart & Vitals", HealthPermission.getReadPermission(BloodPressureRecord::class)),
-        PermissionDef("blood_oxygen", "Blood Oxygen", "Heart & Vitals", HealthPermission.getReadPermission(OxygenSaturationRecord::class)),
-        PermissionDef("respiratory_rate", "Respiratory Rate", "Heart & Vitals", HealthPermission.getReadPermission(RespiratoryRateRecord::class)),
-        PermissionDef("blood_glucose", "Blood Glucose", "Heart & Vitals", HealthPermission.getReadPermission(BloodGlucoseRecord::class)),
-        PermissionDef("body_temperature", "Body Temperature", "Heart & Vitals", HealthPermission.getReadPermission(BodyTemperatureRecord::class)),
-        PermissionDef("basal_body_temperature", "Basal Body Temperature", "Heart & Vitals", HealthPermission.getReadPermission(BasalBodyTemperatureRecord::class)),
-        PermissionDef("vo2_max", "VO2 Max", "Heart & Vitals", HealthPermission.getReadPermission(Vo2MaxRecord::class)),
+        PermissionDef("heart_rate", "Heart Rate", "Heart & Vitals", "HeartRate", HealthPermission.getReadPermission(HeartRateRecord::class)),
+        PermissionDef("heart_rate_variability", "Heart Rate Variability", "Heart & Vitals", "HeartRateVariabilityRmssd", HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class)),
+        PermissionDef("resting_heart_rate", "Resting Heart Rate", "Heart & Vitals", "RestingHeartRate", HealthPermission.getReadPermission(RestingHeartRateRecord::class)),
+        PermissionDef("blood_pressure", "Blood Pressure", "Heart & Vitals", "BloodPressure", HealthPermission.getReadPermission(BloodPressureRecord::class)),
+        PermissionDef("blood_oxygen", "Blood Oxygen", "Heart & Vitals", "OxygenSaturation", HealthPermission.getReadPermission(OxygenSaturationRecord::class)),
+        PermissionDef("respiratory_rate", "Respiratory Rate", "Heart & Vitals", "RespiratoryRate", HealthPermission.getReadPermission(RespiratoryRateRecord::class)),
+        PermissionDef("blood_glucose", "Blood Glucose", "Heart & Vitals", "BloodGlucose", HealthPermission.getReadPermission(BloodGlucoseRecord::class)),
+        PermissionDef("body_temperature", "Body Temperature", "Heart & Vitals", "BodyTemperature", HealthPermission.getReadPermission(BodyTemperatureRecord::class)),
+        PermissionDef("basal_body_temperature", "Basal Body Temperature", "Heart & Vitals", "BasalBodyTemperature", HealthPermission.getReadPermission(BasalBodyTemperatureRecord::class)),
+        PermissionDef("vo2_max", "VO2 Max", "Heart & Vitals", "Vo2Max", HealthPermission.getReadPermission(Vo2MaxRecord::class)),
 
         // Physical Activity
-        PermissionDef("steps", "Steps", "Physical Activity", HealthPermission.getReadPermission(StepsRecord::class)),
-        PermissionDef("distance", "Distance", "Physical Activity", HealthPermission.getReadPermission(DistanceRecord::class)),
-        PermissionDef("active_calories", "Active Calories Burned", "Physical Activity", HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class)),
-        PermissionDef("total_calories", "Total Calories Burned", "Physical Activity", HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class)),
-        PermissionDef("floors_climbed", "Floors Climbed", "Physical Activity", HealthPermission.getReadPermission(FloorsClimbedRecord::class)),
-        PermissionDef("elevation_gained", "Elevation Gained", "Physical Activity", HealthPermission.getReadPermission(ElevationGainedRecord::class)),
-        PermissionDef("speed", "Speed", "Physical Activity", HealthPermission.getReadPermission(SpeedRecord::class)),
-        PermissionDef("power", "Power", "Physical Activity", HealthPermission.getReadPermission(PowerRecord::class)),
-        PermissionDef("exercise", "Exercise Sessions", "Physical Activity", HealthPermission.getReadPermission(ExerciseSessionRecord::class)),
-        PermissionDef("wheelchair_pushes", "Wheelchair Pushes", "Physical Activity", HealthPermission.getReadPermission(WheelchairPushesRecord::class)),
-        PermissionDef("planned_exercise", "Training Plans", "Physical Activity", HealthPermission.getReadPermission(PlannedExerciseSessionRecord::class)),
+        PermissionDef("steps", "Steps", "Physical Activity", "Steps", HealthPermission.getReadPermission(StepsRecord::class)),
+        PermissionDef("distance", "Distance", "Physical Activity", "Distance", HealthPermission.getReadPermission(DistanceRecord::class)),
+        PermissionDef("active_calories", "Active Calories Burned", "Physical Activity", "ActiveCaloriesBurned", HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class)),
+        PermissionDef("total_calories", "Total Calories Burned", "Physical Activity", "TotalCaloriesBurned", HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class)),
+        PermissionDef("floors_climbed", "Floors Climbed", "Physical Activity", "FloorsClimbed", HealthPermission.getReadPermission(FloorsClimbedRecord::class)),
+        PermissionDef("elevation_gained", "Elevation Gained", "Physical Activity", "ElevationGained", HealthPermission.getReadPermission(ElevationGainedRecord::class)),
+        PermissionDef("speed", "Speed", "Physical Activity", "Speed", HealthPermission.getReadPermission(SpeedRecord::class)),
+        PermissionDef("power", "Power", "Physical Activity", "Power", HealthPermission.getReadPermission(PowerRecord::class)),
+        PermissionDef("exercise", "Exercise Sessions", "Physical Activity", "ExerciseSession", HealthPermission.getReadPermission(ExerciseSessionRecord::class)),
+        PermissionDef("wheelchair_pushes", "Wheelchair Pushes", "Physical Activity", "WheelchairPushes", HealthPermission.getReadPermission(WheelchairPushesRecord::class)),
+        PermissionDef("planned_exercise", "Training Plans", "Physical Activity", "PlannedExerciseSession", HealthPermission.getReadPermission(PlannedExerciseSessionRecord::class)),
 
         // Body Measurements
-        PermissionDef("weight", "Weight", "Body Measurements", HealthPermission.getReadPermission(WeightRecord::class)),
-        PermissionDef("height", "Height", "Body Measurements", HealthPermission.getReadPermission(HeightRecord::class)),
-        PermissionDef("body_fat", "Body Fat", "Body Measurements", HealthPermission.getReadPermission(BodyFatRecord::class)),
-        PermissionDef("body_water_mass", "Body Water Mass", "Body Measurements", HealthPermission.getReadPermission(BodyWaterMassRecord::class)),
-        PermissionDef("bone_mass", "Bone Mass", "Body Measurements", HealthPermission.getReadPermission(BoneMassRecord::class)),
-        PermissionDef("lean_body_mass", "Lean Body Mass", "Body Measurements", HealthPermission.getReadPermission(LeanBodyMassRecord::class)),
-        PermissionDef("basal_metabolic_rate", "Basal Metabolic Rate", "Body Measurements", HealthPermission.getReadPermission(BasalMetabolicRateRecord::class)),
-        PermissionDef("skin_temperature", "Skin Temperature", "Body Measurements", HealthPermission.getReadPermission(SkinTemperatureRecord::class)),
+        PermissionDef("weight", "Weight", "Body Measurements", "Weight", HealthPermission.getReadPermission(WeightRecord::class)),
+        PermissionDef("height", "Height", "Body Measurements", "Height", HealthPermission.getReadPermission(HeightRecord::class)),
+        PermissionDef("body_fat", "Body Fat", "Body Measurements", "BodyFat", HealthPermission.getReadPermission(BodyFatRecord::class)),
+        PermissionDef("body_water_mass", "Body Water Mass", "Body Measurements", "BodyWaterMass", HealthPermission.getReadPermission(BodyWaterMassRecord::class)),
+        PermissionDef("bone_mass", "Bone Mass", "Body Measurements", "BoneMass", HealthPermission.getReadPermission(BoneMassRecord::class)),
+        PermissionDef("lean_body_mass", "Lean Body Mass", "Body Measurements", "LeanBodyMass", HealthPermission.getReadPermission(LeanBodyMassRecord::class)),
+        PermissionDef("basal_metabolic_rate", "Basal Metabolic Rate", "Body Measurements", "BasalMetabolicRate", HealthPermission.getReadPermission(BasalMetabolicRateRecord::class)),
+        PermissionDef("skin_temperature", "Skin Temperature", "Body Measurements", "SkinTemperature", HealthPermission.getReadPermission(SkinTemperatureRecord::class)),
 
-        // Sleep
-        PermissionDef("sleep", "Sleep Sessions", "Sleep Analysis", HealthPermission.getReadPermission(SleepSessionRecord::class)),
+        // Sleep & Mindfulness
+        PermissionDef("sleep", "Sleep Sessions", "Sleep & Mindfulness", "SleepSession", HealthPermission.getReadPermission(SleepSessionRecord::class)),
+        PermissionDef("mindfulness", "Mindfulness Sessions", "Sleep & Mindfulness", "MindfulnessSession", HealthPermission.getReadPermission(MindfulnessSessionRecord::class)),
+
+        // Activity Intensity (ActivityIntensityRecord not yet available in released SDK)
+        PermissionDef("steps_cadence", "Steps Cadence", "Activity Intensity", "StepsCadence", HealthPermission.getReadPermission(StepsCadenceRecord::class)),
+        PermissionDef("cycling_cadence", "Cycling Cadence", "Activity Intensity", "CyclingPedalingCadence", HealthPermission.getReadPermission(CyclingPedalingCadenceRecord::class)),
 
         // Nutrition
-        PermissionDef("hydration", "Water / Hydration", "Nutrition", HealthPermission.getReadPermission(HydrationRecord::class)),
-        PermissionDef("nutrition", "Nutrition / Macros", "Nutrition", HealthPermission.getReadPermission(NutritionRecord::class)),
+        PermissionDef("hydration", "Water / Hydration", "Nutrition", "Hydration", HealthPermission.getReadPermission(HydrationRecord::class)),
+        PermissionDef("nutrition", "Nutrition / Macros", "Nutrition", "Nutrition", HealthPermission.getReadPermission(NutritionRecord::class)),
 
         // Cycle Tracking
-        PermissionDef("menstruation_flow", "Menstruation Flow", "Cycle Tracking", HealthPermission.getReadPermission(MenstruationFlowRecord::class)),
-        PermissionDef("menstruation_period", "Menstruation Period", "Cycle Tracking", HealthPermission.getReadPermission(MenstruationPeriodRecord::class)),
-        PermissionDef("cervical_mucus", "Cervical Mucus", "Cycle Tracking", HealthPermission.getReadPermission(CervicalMucusRecord::class)),
-        PermissionDef("ovulation_test", "Ovulation Test", "Cycle Tracking", HealthPermission.getReadPermission(OvulationTestRecord::class)),
-        PermissionDef("sexual_activity", "Sexual Activity", "Cycle Tracking", HealthPermission.getReadPermission(SexualActivityRecord::class)),
-        PermissionDef("intermenstrual_bleeding", "Intermenstrual Bleeding", "Cycle Tracking", HealthPermission.getReadPermission(IntermenstrualBleedingRecord::class)),
+        PermissionDef("menstruation_flow", "Menstruation Flow", "Cycle Tracking", "MenstruationFlow", HealthPermission.getReadPermission(MenstruationFlowRecord::class)),
+        PermissionDef("menstruation_period", "Menstruation Period", "Cycle Tracking", "MenstruationPeriod", HealthPermission.getReadPermission(MenstruationPeriodRecord::class)),
+        PermissionDef("cervical_mucus", "Cervical Mucus", "Cycle Tracking", "CervicalMucus", HealthPermission.getReadPermission(CervicalMucusRecord::class)),
+        PermissionDef("ovulation_test", "Ovulation Test", "Cycle Tracking", "OvulationTest", HealthPermission.getReadPermission(OvulationTestRecord::class)),
+        PermissionDef("sexual_activity", "Sexual Activity", "Cycle Tracking", "SexualActivity", HealthPermission.getReadPermission(SexualActivityRecord::class)),
+        PermissionDef("intermenstrual_bleeding", "Intermenstrual Bleeding", "Cycle Tracking", "IntermenstrualBleeding", HealthPermission.getReadPermission(IntermenstrualBleedingRecord::class)),
     )
 
     // All Health Connect permissions
@@ -83,6 +95,7 @@ class MainActivity : FlutterFragmentActivity() {
         val id: String,
         val name: String,
         val category: String,
+        val recordType: String,  // API endpoint name (e.g., "Weight", "HeartRate")
         val permission: String
     )
 
@@ -186,6 +199,7 @@ class MainActivity : FlutterFragmentActivity() {
                                         "id" to def.id,
                                         "name" to def.name,
                                         "category" to def.category,
+                                        "recordType" to def.recordType,
                                         "granted" to granted.contains(def.permission)
                                     )
                                 }
@@ -237,6 +251,80 @@ class MainActivity : FlutterFragmentActivity() {
                 }
                 else -> result.notImplemented()
             }
+        }
+
+        // App Permissions Channel - reads permissions from PackageManager
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, PERMISSIONS_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getPermissions" -> {
+                    try {
+                        val permissionsList = getAppPermissions()
+                        result.success(permissionsList)
+                    } catch (e: Exception) {
+                        result.success(listOf<Map<String, Any>>())
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    /**
+     * Get all declared permissions for this app from PackageManager
+     */
+    private fun getAppPermissions(): List<Map<String, Any?>> {
+        val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            packageManager.getPackageInfo(
+                packageName,
+                PackageManager.PackageInfoFlags.of(PackageManager.GET_PERMISSIONS.toLong())
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            packageManager.getPackageInfo(packageName, PackageManager.GET_PERMISSIONS)
+        }
+
+        val requestedPermissions = packageInfo.requestedPermissions ?: return emptyList()
+        val requestedPermissionsFlags = packageInfo.requestedPermissionsFlags
+
+        return requestedPermissions.mapIndexed { index, permission ->
+            val isGranted = if (requestedPermissionsFlags != null) {
+                (requestedPermissionsFlags[index] and PackageInfo.REQUESTED_PERMISSION_GRANTED) != 0
+            } else {
+                ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
+            }
+
+            // Get permission info for description and protection level
+            val permissionInfo = try {
+                @Suppress("DEPRECATION")
+                packageManager.getPermissionInfo(permission, 0)
+            } catch (e: Exception) {
+                null
+            }
+
+            val description = permissionInfo?.loadDescription(packageManager)?.toString()
+            val group = permissionInfo?.group
+            val protectionLevel = permissionInfo?.let { getProtectionLevelString(it.protectionLevel) }
+
+            mapOf(
+                "name" to permission,
+                "granted" to isGranted,
+                "group" to group,
+                "description" to description,
+                "protectionLevel" to protectionLevel
+            )
+        }
+    }
+
+    /**
+     * Convert protection level int to readable string
+     */
+    private fun getProtectionLevelString(level: Int): String {
+        return when (level and android.content.pm.PermissionInfo.PROTECTION_MASK_BASE) {
+            android.content.pm.PermissionInfo.PROTECTION_NORMAL -> "normal"
+            android.content.pm.PermissionInfo.PROTECTION_DANGEROUS -> "dangerous"
+            android.content.pm.PermissionInfo.PROTECTION_SIGNATURE -> "signature"
+            android.content.pm.PermissionInfo.PROTECTION_SIGNATURE_OR_SYSTEM -> "signature|system"
+            else -> "unknown"
         }
     }
 
@@ -468,6 +556,7 @@ class MainActivity : FlutterFragmentActivity() {
                 val response = healthConnectClient.readRecords(request)
                 response.records.map { record ->
                     mapOf(
+                        "id" to record.metadata.id,
                         "time" to record.time.toEpochMilli(),
                         "weight" to record.weight.inKilograms
                     )
@@ -478,6 +567,7 @@ class MainActivity : FlutterFragmentActivity() {
                 val response = healthConnectClient.readRecords(request)
                 response.records.map { record ->
                     mapOf(
+                        "id" to record.metadata.id,
                         "time" to record.time.toEpochMilli(),
                         "height" to record.height.inMeters
                     )
@@ -638,6 +728,43 @@ class MainActivity : FlutterFragmentActivity() {
                     )
                 }
             }
+            "steps_cadence" -> {
+                val request = ReadRecordsRequest(StepsCadenceRecord::class, timeRangeFilter)
+                val response = healthConnectClient.readRecords(request)
+                response.records.flatMap { record ->
+                    record.samples.map { sample ->
+                        mapOf(
+                            "time" to sample.time.toEpochMilli(),
+                            "rate" to sample.rate
+                        )
+                    }
+                }
+            }
+            "cycling_cadence" -> {
+                val request = ReadRecordsRequest(CyclingPedalingCadenceRecord::class, timeRangeFilter)
+                val response = healthConnectClient.readRecords(request)
+                response.records.flatMap { record ->
+                    record.samples.map { sample ->
+                        mapOf(
+                            "time" to sample.time.toEpochMilli(),
+                            "revolutionsPerMinute" to sample.revolutionsPerMinute
+                        )
+                    }
+                }
+            }
+            "mindfulness" -> {
+                val request = ReadRecordsRequest(MindfulnessSessionRecord::class, timeRangeFilter)
+                val response = healthConnectClient.readRecords(request)
+                response.records.map { record ->
+                    mapOf(
+                        "startTime" to record.startTime.toEpochMilli(),
+                        "endTime" to record.endTime.toEpochMilli(),
+                        "title" to record.title,
+                        "mindfulnessSessionType" to record.mindfulnessSessionType
+                    )
+                }
+            }
+            // TODO: Add activity_intensity when ActivityIntensityRecord becomes available in SDK
             else -> emptyList()
         }
     }

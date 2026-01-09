@@ -19,6 +19,11 @@ android {
 
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_17.toString()
+        // Allow experimental Health Connect APIs (MindfulnessSessionRecord)
+        freeCompilerArgs = listOf(
+            "-opt-in=kotlin.RequiresOptIn",
+            "-opt-in=androidx.health.connect.client.records.ExperimentalMindfulnessSessionRecordApi"
+        )
     }
 
     defaultConfig {
@@ -42,7 +47,9 @@ android {
 }
 
 dependencies {
-    implementation("androidx.health.connect:connect-client:1.1.0-alpha10")
+    // Health Connect 1.1.0 stable - MindfulnessSessionRecord enabled
+    // Note: ActivityIntensityRecord not yet available in released SDK versions
+    implementation("androidx.health.connect:connect-client:1.1.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")

@@ -62,7 +62,7 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 
-    <!-- Internet Permission -->
+    <!-- Internet & System Permissions -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
@@ -71,47 +71,65 @@
     <uses-permission android:name="android.permission.VIBRATE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
 
-    <!-- Health Connect Permissions -->
+    <!-- ======================= HEALTH CONNECT PERMISSIONS ======================= -->
+
+    <!-- Activity - Data related to the user's physical activities -->
     <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED"/>
+    <uses-permission android:name="android.permission.health.READ_ACTIVITY_INTENSITY"/>
     <uses-permission android:name="android.permission.health.READ_DISTANCE"/>
     <uses-permission android:name="android.permission.health.READ_ELEVATION_GAINED"/>
     <uses-permission android:name="android.permission.health.READ_EXERCISE"/>
+    <uses-permission android:name="android.permission.health.READ_EXERCISE_ROUTES"/>
     <uses-permission android:name="android.permission.health.READ_FLOORS_CLIMBED"/>
+    <uses-permission android:name="android.permission.health.READ_PLANNED_EXERCISE"/>
     <uses-permission android:name="android.permission.health.READ_POWER"/>
     <uses-permission android:name="android.permission.health.READ_SPEED"/>
     <uses-permission android:name="android.permission.health.READ_STEPS"/>
     <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED"/>
     <uses-permission android:name="android.permission.health.READ_VO2_MAX"/>
     <uses-permission android:name="android.permission.health.READ_WHEELCHAIR_PUSHES"/>
+
+    <!-- Body Measurement - Measurements related to the physical state of the body -->
     <uses-permission android:name="android.permission.health.READ_BASAL_METABOLIC_RATE"/>
     <uses-permission android:name="android.permission.health.READ_BODY_FAT"/>
+    <uses-permission android:name="android.permission.health.READ_BODY_MASS_INDEX"/>
+    <uses-permission android:name="android.permission.health.READ_BODY_WATER_MASS"/>
     <uses-permission android:name="android.permission.health.READ_BONE_MASS"/>
     <uses-permission android:name="android.permission.health.READ_HEIGHT"/>
     <uses-permission android:name="android.permission.health.READ_HIP_CIRCUMFERENCE"/>
     <uses-permission android:name="android.permission.health.READ_LEAN_BODY_MASS"/>
     <uses-permission android:name="android.permission.health.READ_WAIST_CIRCUMFERENCE"/>
     <uses-permission android:name="android.permission.health.READ_WEIGHT"/>
+
+    <!-- Cycle Tracking - Data related to the menstrual cycle -->
     <uses-permission android:name="android.permission.health.READ_CERVICAL_MUCUS"/>
+    <uses-permission android:name="android.permission.health.READ_INTERMENSTRUAL_BLEEDING"/>
     <uses-permission android:name="android.permission.health.READ_MENSTRUATION"/>
     <uses-permission android:name="android.permission.health.READ_OVULATION_TEST"/>
     <uses-permission android:name="android.permission.health.READ_SEXUAL_ACTIVITY"/>
-    <uses-permission android:name="android.permission.health.READ_NUTRITION"/>
+
+    <!-- Nutrition - Data related to food and fluid intake -->
     <uses-permission android:name="android.permission.health.READ_HYDRATION"/>
+    <uses-permission android:name="android.permission.health.READ_NUTRITION"/>
+
+    <!-- Sleep - Data related to sleep patterns and quality -->
     <uses-permission android:name="android.permission.health.READ_SLEEP"/>
+
+    <!-- Vitals - Data on key health indicators and vital signs -->
+    <uses-permission android:name="android.permission.health.READ_BASAL_BODY_TEMPERATURE"/>
     <uses-permission android:name="android.permission.health.READ_BLOOD_GLUCOSE"/>
     <uses-permission android:name="android.permission.health.READ_BLOOD_PRESSURE"/>
     <uses-permission android:name="android.permission.health.READ_BODY_TEMPERATURE"/>
-    <uses-permission android:name="android.permission.health.READ_BASAL_BODY_TEMPERATURE"/>
     <uses-permission android:name="android.permission.health.READ_HEART_RATE"/>
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY"/>
     <uses-permission android:name="android.permission.health.READ_OXYGEN_SATURATION"/>
     <uses-permission android:name="android.permission.health.READ_RESPIRATORY_RATE"/>
     <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE"/>
-    <uses-permission android:name="android.permission.health.READ_INTERMENSTRUAL_BLEEDING"/>
-    <uses-permission android:name="android.permission.health.READ_BODY_WATER_MASS"/>
-    <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY"/>
-    <uses-permission android:name="android.permission.health.READ_BODY_MASS_INDEX"/>
-    <uses-permission android:name="android.permission.health.READ_EXERCISE_ROUTES"/>
-    <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND"/>
+
+    <!-- Mindfulness - Data related to mental wellness and mindfulness practices -->
+    <uses-permission android:name="android.permission.health.READ_MINDFULNESS"/>
+
+    <!-- Medical Data - Clinical and medical records data -->
     <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_ALLERGIES_INTOLERANCES"/>
     <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_CONDITIONS"/>
     <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_LABORATORY_RESULTS"/>
@@ -124,12 +142,9 @@
     <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_VACCINES"/>
     <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_VISITS"/>
     <uses-permission android:name="android.permission.health.READ_MEDICAL_DATA_VITAL_SIGNS"/>
-    <uses-permission android:name="android.permission.health.READ_MINDFULNESS"/>
-    <uses-permission android:name="android.permission.health.READ_PLANNED_EXERCISE"/>
-    <uses-permission android:name="android.permission.health.READ_ACTIVITY_INTENSITY"/>
 
-
-    <!-- Other Health Permissions -->
+    <!-- System - System-level health data permissions -->
+    <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND"/>
     <uses-permission android:name="android.permission.PERMISSION_READ_HEALTH_DATA_HISTORY"/>
-    <uses-permission android:name="android.permission.START_ONBOARDING"/>
+
 </manifest>

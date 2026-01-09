@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:vitalgate/core/services/auth_service.dart';
 import 'package:vitalgate/core/services/notification_service.dart';
+import 'package:vitalgate/core/services/sync_history_service.dart';
 
 /// Sync state enum for UI updates
 enum SyncState {
@@ -29,7 +30,7 @@ void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     if (task == backgroundSyncTask) {
       final syncService = SyncService();
-      await syncService.performSync();
+      await syncService.performSync(isBackgroundSync: true);
     }
     return Future.value(true);
   });
@@ -42,7 +43,19 @@ class SyncService {
 
   final AuthService _authService = AuthService();
   final NotificationService _notificationService = NotificationService();
+  final SyncHistoryService _historyService = SyncHistoryService();
   static const MethodChannel _channel = MethodChannel('com.bamscorp.vitalgate/health_connect');
+
+  // Cancellation flag
+  bool _isCancelled = false;
+
+  /// Request sync cancellation
+  void cancelSync() {
+    _isCancelled = true;
+  }
+
+  /// Check if sync is cancelled
+  bool get isCancelled => _isCancelled;
 
   // Storage keys
   static const String _keySyncInterval = 'sync_interval';
@@ -69,48 +82,9 @@ class SyncService {
     '30 days': 30,
   };
 
-  // Map permission IDs (snake_case) to Health Connect record types (PascalCase)
-  // This matches HCGateway's API format
-  static const Map<String, String> _permissionToRecordType = {
-    'heart_rate': 'HeartRate',
-    'heart_rate_variability': 'HeartRateVariabilityRmssd',
-    'resting_heart_rate': 'RestingHeartRate',
-    'blood_pressure': 'BloodPressure',
-    'blood_oxygen': 'OxygenSaturation',
-    'respiratory_rate': 'RespiratoryRate',
-    'blood_glucose': 'BloodGlucose',
-    'body_temperature': 'BodyTemperature',
-    'basal_body_temperature': 'BasalBodyTemperature',
-    'vo2_max': 'Vo2Max',
-    'steps': 'Steps',
-    'distance': 'Distance',
-    'active_calories': 'ActiveCaloriesBurned',
-    'total_calories': 'TotalCaloriesBurned',
-    'floors_climbed': 'FloorsClimbed',
-    'elevation_gained': 'ElevationGained',
-    'speed': 'Speed',
-    'power': 'Power',
-    'exercise': 'ExerciseSession',
-    'wheelchair_pushes': 'WheelchairPushes',
-    'planned_exercise': 'PlannedExerciseSession',
-    'weight': 'Weight',
-    'height': 'Height',
-    'body_fat': 'BodyFat',
-    'body_water_mass': 'BodyWaterMass',
-    'bone_mass': 'BoneMass',
-    'lean_body_mass': 'LeanBodyMass',
-    'basal_metabolic_rate': 'BasalMetabolicRate',
-    'skin_temperature': 'SkinTemperature',
-    'sleep': 'SleepSession',
-    'hydration': 'Hydration',
-    'nutrition': 'Nutrition',
-    'menstruation_flow': 'MenstruationFlow',
-    'menstruation_period': 'MenstruationPeriod',
-    'cervical_mucus': 'CervicalMucus',
-    'ovulation_test': 'OvulationTest',
-    'sexual_activity': 'SexualActivity',
-    'intermenstrual_bleeding': 'IntermenstrualBleeding',
-  };
+  // Permission IDs that should be synced (for now only weight and height)
+  // TODO: Expand this list when ready to sync more data types
+  static const List<String> _allowedPermissionIds = ['weight', 'height'];
 
   // Large data types that should be synced one record at a time (like HCGateway)
   static const List<String> _largeDataTypes = ['SleepSession', 'Speed', 'HeartRate'];
@@ -214,12 +188,17 @@ class SyncService {
   /// Perform sync - upload all health data to API (HCGateway compatible)
   /// [onProgress] callback for UI updates with current state, message, and progress
   /// [showNotifications] whether to show system notifications (default: true)
+  /// [isBackgroundSync] whether this is a background sync (for history logging)
   Future<SyncResult> performSync({
     DateTime? customStartTime,
     DateTime? customEndTime,
     SyncProgressCallback? onProgress,
     bool showNotifications = true,
+    bool isBackgroundSync = false,
   }) async {
+    // Reset cancellation flag at start
+    _isCancelled = false;
+
     try {
       // Initialize notification service
       if (showNotifications) {
@@ -246,6 +225,11 @@ class SyncService {
       // Get granted permissions
       onProgress?.call(SyncState.syncingData, 'Getting permissions...', 0, 0);
       final permissions = await getGrantedPermissions();
+      print('DEBUG: Got ${permissions.length} granted permissions');
+      for (final p in permissions) {
+        print('DEBUG: Permission: ${p['id']}, recordType: ${p['recordType']}, granted: ${p['granted']}');
+      }
+
       if (permissions.isEmpty) {
         if (showNotifications) {
           await _notificationService.cancelSyncNotification();
@@ -259,13 +243,33 @@ class SyncService {
         );
       }
 
-      // Filter valid permissions (exclude background_read and unmapped ones)
+      // Filter valid permissions (only allowed types that are granted and have recordType)
       final validPermissions = permissions.where((p) {
         final id = p['id'] as String;
-        return id != 'background_read' && _permissionToRecordType.containsKey(id);
+        final recordType = p['recordType'] as String?;
+        final isAllowed = _allowedPermissionIds.contains(id);
+        print('DEBUG: Checking $id - recordType: $recordType, isAllowed: $isAllowed');
+        return id != 'background_read' &&
+               recordType != null &&
+               isAllowed;
       }).toList();
 
+      print('DEBUG: Valid permissions after filter: ${validPermissions.length}');
+
       final totalTypes = validPermissions.length;
+
+      if (totalTypes == 0) {
+        if (showNotifications) {
+          await _notificationService.cancelSyncNotification();
+        }
+        onProgress?.call(SyncState.error, 'No weight/height permissions', 0, 0);
+        return SyncResult(
+          success: false,
+          message: 'Weight and Height permissions not granted',
+          uploadedCount: 0,
+          failedCount: 0,
+        );
+      }
 
       // Determine time range
       final DateTime endTime = customEndTime ?? DateTime.now();
@@ -291,8 +295,21 @@ class SyncService {
 
       // Upload data for each granted permission
       for (final permission in validPermissions) {
+        // Check for cancellation
+        if (_isCancelled) {
+          if (showNotifications) {
+            await _notificationService.cancelSyncNotification();
+          }
+          return SyncResult(
+            success: false,
+            message: 'Sync cancelled',
+            uploadedCount: uploadedCount,
+            failedCount: failedCount,
+          );
+        }
+
         final permissionId = permission['id'] as String;
-        final recordType = _permissionToRecordType[permissionId]!;
+        final recordType = permission['recordType'] as String;
         currentTypeIndex++;
 
         // Update progress
@@ -313,13 +330,16 @@ class SyncService {
 
         try {
           // Get health data for this permission type
+          print('DEBUG: Getting health data for $permissionId from $startTime to $endTime');
           final healthData = await _getHealthDataForPermission(
             permissionId,
             startTime,
             endTime,
           );
+          print('DEBUG: Got ${healthData.length} records for $permissionId');
 
           if (healthData.isNotEmpty) {
+            print('DEBUG: Uploading ${healthData.length} $recordType records to $baseUrl/api/v1/health/$recordType');
             // For large data types, sync one at a time
             if (_largeDataTypes.contains(recordType)) {
               for (int i = 0; i < healthData.length; i++) {
@@ -388,6 +408,14 @@ class SyncService {
         errors: errors,
       );
 
+      // Log to sync history
+      await _historyService.logSync(
+        successCount: uploadedCount,
+        failedCount: failedCount,
+        errors: errors,
+        isBackgroundSync: isBackgroundSync,
+      );
+
       onProgress?.call(
         failedCount == 0 ? SyncState.completed : SyncState.error,
         result.message,
@@ -400,6 +428,15 @@ class SyncService {
       if (showNotifications) {
         await _notificationService.cancelSyncNotification();
       }
+
+      // Log error to sync history
+      await _historyService.logSync(
+        successCount: 0,
+        failedCount: 1,
+        errors: ['Sync error: $e'],
+        isBackgroundSync: isBackgroundSync,
+      );
+
       onProgress?.call(SyncState.error, 'Sync error: $e', 0, 0);
       return SyncResult(
         success: false,
@@ -437,6 +474,60 @@ class SyncService {
     }
   }
 
+  /// TEST: Read historical data for testing READ_HEALTH_DATA_HISTORY permission
+  Future<String> testReadHistoricalData({
+    required String permissionId,
+    required DateTime startTime,
+    required DateTime endTime,
+  }) async {
+    try {
+      // First check if permission is granted
+      final permResult = await _channel.invokeMethod<Map<dynamic, dynamic>>('getPermissionsList');
+      String permStatus = 'unknown';
+      if (permResult != null && permResult['success'] == true) {
+        final permissions = permResult['permissions'] as List<dynamic>? ?? [];
+        final weightPerm = permissions.firstWhere(
+          (p) => p['id'] == permissionId,
+          orElse: () => null,
+        );
+        if (weightPerm != null) {
+          permStatus = weightPerm['granted'] == true ? 'GRANTED' : 'NOT GRANTED';
+        } else {
+          permStatus = 'NOT FOUND in list';
+        }
+      }
+
+      final result = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+        'getHealthData',
+        {
+          'type': permissionId,
+          'startTime': startTime.millisecondsSinceEpoch,
+          'endTime': endTime.millisecondsSinceEpoch,
+        },
+      );
+
+      final dateStr = '${startTime.year}-${startTime.month.toString().padLeft(2, '0')}-${startTime.day.toString().padLeft(2, '0')}';
+
+      if (result != null) {
+        final success = result['success'];
+        final error = result['error'];
+        final data = result['data'] as List<dynamic>? ?? [];
+
+        if (success == true) {
+          if (data.isEmpty) {
+            return 'Permission: $permStatus\nDate: $dateStr\nResult: No data found (empty list returned)';
+          }
+          return 'Permission: $permStatus\nDate: $dateStr\nFound ${data.length} record(s):\n${data.first}';
+        } else {
+          return 'Permission: $permStatus\nDate: $dateStr\nError: ${error ?? 'Unknown error'}';
+        }
+      }
+      return 'Permission: $permStatus\nNo response from native code';
+    } catch (e) {
+      return 'Exception: $e';
+    }
+  }
+
   /// Upload health data to API (HCGateway compatible format)
   /// Endpoint: /api/v1/health/{RecordType}
   Future<bool> _uploadHealthData({
@@ -448,6 +539,7 @@ class SyncService {
     try {
       // Use HCGateway's API format: /api/v1/health/{RecordType}
       final uri = Uri.parse('$baseUrl/api/v1/health/$recordType');
+      print('DEBUG: POST $uri with ${data.length} records');
       final response = await http.post(
         uri,
         headers: {
@@ -456,6 +548,7 @@ class SyncService {
         },
         body: jsonEncode({'data': data}),
       );
+      print('DEBUG: Response ${response.statusCode}: ${response.body}');
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return true;
