@@ -1,14 +1,56 @@
 #General
 *.idea/*
+/a.py
+/t.py
 
 # API
 /api/.env
 /api/node_modules/
 /api/package-lock.json
-
-#APP
 /api/dist/
 /api/.claude/settings.local.json
-/a.py
-/t.py
+/api/public/
+
+#APP
 /app/.claude/settings.local.json
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+/app/.atom/
+/app/.build/
+/app/.buildlog/
+/app/.history
+/app/.svn/
+/app/.swiftpm/
+/app/migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+/app/.idea/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+app/.dart_tool/
+app/.flutter-plugins-dependencies
+app/.pub-cache/
+app/.pub/
+app/build/
+app/coverage/
+
+# Symbolication related
+/app/app.*.symbols
+
+# Obfuscation related
+/app/app.*.map.json
+
+# Android Studio will place build artifacts here
+/app/android/app/debug
+/app/android/app/profile
+/app/android/app/release
+/app/android/app/google-services.json

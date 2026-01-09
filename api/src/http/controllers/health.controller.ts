@@ -10,7 +10,7 @@ export default class HealthController {
 
     public checkPermission = async (request: Request, response: Response) => {
         const permissionName = request.params.PERMISSION_NAME;
-        await this.service.logPermission(permissionName);
+        await this.service.logPermission(permissionName, request.body?? null);
 
         return response.status(200).json({
             status: true

@@ -1,6 +1,7 @@
 import express, {Application, Request, Response} from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
+import path from "path";
 import {useRoutes} from './init.routes.impl';
 import errorHandler from "./error.handler.impl";
 import controlHeaders from "./control.headers.impl";
@@ -31,6 +32,9 @@ server.use(cors({
 server.use(express.json());
 server.use(bodyParser.json({limit: '15mb'}));
 server.use(bodyParser.urlencoded({extended: true, limit: '15mb'}));
+
+// static files
+server.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
 
 // context middleware
 server.use(contextMiddleware)

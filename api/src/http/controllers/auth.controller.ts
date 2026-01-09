@@ -103,9 +103,96 @@ log(error)
                 id: user.id,
                 email: user.email,
                 full_name: user.full_name,
+                birthdate: user.birthdate,
+                profile_picture: user.profile_picture ?? null,
                 created_at: user.created_at,
                 updated_at: user.updated_at
             }
         });
+    }
+
+    public updateProfile = async (request: Request, response: Response) => {
+        try {
+            const user = request.user!;
+            const {full_name, email, birthdate} = request.body;
+
+            const updatedUser = await this.service.updateProfile(user.id, {full_name, email, birthdate});
+
+            return response.status(HttpStatusCode.Ok).json({
+                success: true,
+                message: 'Profile updated successfully',
+                data: {
+                    id: updatedUser.id,
+                    email: updatedUser.email,
+                    full_name: updatedUser.full_name,
+                    birthdate: updatedUser.birthdate,
+                    profile_picture: updatedUser.profile_picture,
+                    created_at: updatedUser.created_at,
+                    updated_at: updatedUser.updated_at
+                }
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'An error occurred';
+
+            return response.status(HttpStatusCode.BadRequest).json({
+                success: false,
+                message
+            });
+        }
+    }
+
+    public updateProfilePicture = async (request: Request, response: Response) => {
+        try {
+            const user = request.user!;
+
+            if (!request.file) {
+                return response.status(HttpStatusCode.BadRequest).json({
+                    success: false,
+                    message: 'Profile picture is required'
+                });
+            }
+
+            const profilePictureUrl = await this.service.updateProfilePicture(user.id, request.file.filename);
+
+            return response.status(HttpStatusCode.Ok).json({
+                success: true,
+                message: 'Profile picture updated successfully',
+                data: {
+                    profile_picture: profilePictureUrl
+                }
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'An error occurred';
+
+            return response.status(HttpStatusCode.BadRequest).json({
+                success: false,
+                message
+            });
+        }
+    }
+
+    public changePassword = async (request: Request, response: Response) => {
+        try {
+            const user = request.user!;
+            const {current_password, new_password, password_confirmation} = request.body;
+
+            await this.service.changePassword(user.id, {
+                current_password,
+                new_password,
+                password_confirmation
+            });
+
+            return response.status(HttpStatusCode.Ok).json({
+                success: true,
+                message: 'Password changed successfully'
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'An error occurred';
+
+            return response.status(HttpStatusCode.BadRequest).json({
+                success: false,
+                message
+            });
+        }
     }
 }

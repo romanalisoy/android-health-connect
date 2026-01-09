@@ -3,7 +3,6 @@ import {
     Column,
     CreateDateColumn,
     Entity,
-    ObjectIdColumn,
     PrimaryColumn,
     UpdateDateColumn
 } from "typeorm";
@@ -28,6 +27,12 @@ export default class User extends BaseEntity implements IModel {
 
     @Column({type: 'text'})
     full_name: string;
+
+    @Column({type: 'date', nullable: true})
+    birthdate: Date | null;
+
+    @Column({type: 'text', nullable: true})
+    profile_picture: string | null;
 
     @CreateDateColumn()
     created_at: DateString;
