@@ -2,11 +2,20 @@
 
 Android Health Connect organizes a wide array of health and fitness data into distinct categories, allowing for comprehensive management and sharing of information across different applications.
 
-Here is the full list of supported data types, organized by category:
+<details>
+<summary>Here is the full list of supported data types, organized by category</summary>
+
+
+</details>
+
+<details>
+<summary>The following data types are not yet supported</summary>
+ 
+### Activity  
+> Data related to the user's physical activities.
 
 | Data Type                  | Description                                                                                          | Is Supported |
 |----------------------------|------------------------------------------------------------------------------------------------------|--------------|
-| **Activity**               | Data related to the user's physical activities.                                                      | -            |
 | Active Calories Burned     | The number of calories burned during exercise or other physical activities.                          | No           |
 | Activity Intensity         | The intensity level of physical activity.                                                            | No           |
 | Distance                   | The distance covered during activities like walking, running, or cycling.                            | No           |
@@ -23,8 +32,12 @@ Here is the full list of supported data types, organized by category:
 | VO2 Max                    | Maximum Oxygen Consumption - The maximum amount of oxygen the body can use during intense exercise.  | No           |
 | Wheelchair Pushes          | The number of pushes for wheelchair users.                                                           | No           |
 | Cycling Pedaling Cadence   | The number of pedal revolutions per minute while cycling.                                            | No           |
-|                            |                                                                                                      |              |
-| **Body Measurement**       | Measurements related to the physical state of the body.                                              | -            |
+
+### Body Measurement
+> Measurements related to the physical state of the body.
+
+| Data Type                  | Description                                                                                          | Is Supported |
+|----------------------------|------------------------------------------------------------------------------------------------------|--------------|
 | Basal Metabolic Rate (BMR) | The number of calories the body burns at rest.                                                       | No           |
 | Body Fat                   | The percentage of fat in the body.                                                                   | No           |
 | Body Mass Index (BMI)      | A measure of body fat based on height and weight.                                                    | No           |
@@ -35,22 +48,40 @@ Here is the full list of supported data types, organized by category:
 | Lean Body Mass             | The total mass of all non-fat tissues in the body.                                                   | No           |
 | Waist Circumference        | The measurement of the waist circumference.                                                          | No           |
 | Weight                     | The user's body weight.                                                                              | No           |
-|                            |                                                                                                      |              |
-| **Cycle Tracking**         | Data related to the menstrual cycle.                                                                 | -            |
+
+### Cycle Tracking
+> Data related to the menstrual cycle.
+
+| Data Type                  | Description                                                                                          | Is Supported |
+|----------------------------|------------------------------------------------------------------------------------------------------|--------------|
 | Cervical Mucus             | The quality of cervical mucus (e.g., texture, appearance).                                           | No           |
 | Menstruation Flow          | The heaviness of menstrual bleeding.                                                                 | No           |
 | Ovulation Test             | The results of ovulation tests (e.g., positive, negative).                                           | No           |
 | Sexual Activity            | Records of sexual activity.                                                                          | No           |
 | Vaginal Spotting           | Records of spotting outside the menstrual period.                                                    | No           |
-|                            |                                                                                                      |              |
-| **Nutrition**              | Data related to food and fluid intake.                                                               | -            |
+
+
+### Nutrition
+> Data related to food and fluid intake. 
+
+| Data Type                  | Description                                                                                          | Is Supported |
+|----------------------------|------------------------------------------------------------------------------------------------------|--------------|
 | Hydration                  | The amount of water consumed.                                                                        | No           |
 | Nutrition                  | Detailed breakdown of calories and macro/micro nutrients consumed (e.g., protein, carbs, fats).      | No           |
-|                            |                                                                                                      |              |
-| **Sleep**                  | Data related to sleep patterns and quality.                                                          | -            |
+
+### Sleep
+> Data related to sleep patterns and quality.
+
+| Data Type                  | Description                                                                                          | Is Supported |
+|----------------------------|------------------------------------------------------------------------------------------------------|--------------|
 | Sleep                      | Details of sleep sessions, including start and end times, and sleep stages (e.g., light, deep, REM). | No           |
-|                            |                                                                                                      |              |
-| **Vitals**                 | Data on key health indicators and vital signs.                                                       | -            |
+
+
+### Vitals
+> Data on key health indicators and vital signs.
+
+| Data Type                  | Description                                                                                          | Is Supported |
+|----------------------------|------------------------------------------------------------------------------------------------------|--------------|
 | Blood Glucose              | The level of sugar in the blood.                                                                     | No           |
 | Blood Pressure             | Systolic and diastolic blood pressure readings.                                                      | No           |
 | Body Temperature           | The body's temperature.                                                                              | No           |
@@ -59,11 +90,20 @@ Here is the full list of supported data types, organized by category:
 | Oxygen Saturation          | The oxygen saturation level in the blood (SpO2).                                                     | No           |
 | Respiratory Rate           | The number of breaths taken per minute.                                                              | No           |
 | Resting Heart Rate         | The heart rate measured when the body is at complete rest.                                           | No           |
-|                            |                                                                                                      |              |
-| **Mindfulness**            | Data related to mental wellness and mindfulness practices.                                           | -            |
+
+### Mindfulness and Medical Data
+> Data related to mental wellness and clinical/medical records.
+
+| Data Type                  | Description                                                                                          | Is Supported |
+|----------------------------|------------------------------------------------------------------------------------------------------|--------------|
 | Mindfulness                | Records of mindfulness or meditation sessions.                                                       | No           |
-|                            |                                                                                                      |              |
-| **Medical Data**           | Clinical and medical records data.                                                                   | -            |
+
+
+### Medical Data
+> Clinical and medical records data.
+
+| Data Type                  | Description                                                                                          | Is Supported |
+|----------------------------|------------------------------------------------------------------------------------------------------|--------------|
 | Allergies & Intolerances   | Records of allergies and food/drug intolerances.                                                     | No           |
 | Conditions                 | Medical conditions and diagnoses.                                                                    | No           |
 | Laboratory Results         | Results from laboratory tests.                                                                       | No           |
@@ -76,9 +116,16 @@ Here is the full list of supported data types, organized by category:
 | Vaccines                   | Vaccination records.                                                                                 | No           |
 | Visits                     | Records of healthcare visits.                                                                        | No           |
 | Vital Signs (Medical)      | Clinical vital signs from medical records.                                                           | No           |
-|                            |                                                                                                      |              |
-| **System**                 | System-level health data permissions.                                                                | -            |
+
+
+### System Permissions
+> Permissions related to system-level health data access.
+
+| Data Type                  | Description                                                                                          | Is Supported |
+|----------------------------|------------------------------------------------------------------------------------------------------|--------------|
 | Health Data in Background  | Permission to read health data in the background.                                                    | No           |
+
+</details>
 
 ## Activity
 
