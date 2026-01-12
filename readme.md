@@ -40,13 +40,10 @@ Android Health Connect organizes a wide array of health and fitness data into di
 |----------------------------|------------------------------------------------------------------------------------------------------|--------------|
 | Basal Metabolic Rate (BMR) | The number of calories the body burns at rest.                                                       | No           |
 | Body Fat                   | The percentage of fat in the body.                                                                   | No           |
-| Body Mass Index (BMI)      | A measure of body fat based on height and weight.                                                    | No           |
 | Body Water Mass            | The total amount of water in the body.                                                               | No           |
 | Bone Mass                  | The total mass of the skeletal system.                                                               | No           |
 | Height                     | The user's height.                                                                                   | No           |
-| Hip Circumference          | The measurement of the hip circumference.                                                            | No           |
 | Lean Body Mass             | The total mass of all non-fat tissues in the body.                                                   | No           |
-| Waist Circumference        | The measurement of the waist circumference.                                                          | No           |
 | Weight                     | The user's body weight.                                                                              | No           |
 
 ### Cycle Tracking
