@@ -92,13 +92,10 @@
     <!-- Body Measurement - Measurements related to the physical state of the body -->
     <uses-permission android:name="android.permission.health.READ_BASAL_METABOLIC_RATE"/>
     <uses-permission android:name="android.permission.health.READ_BODY_FAT"/>
-    <uses-permission android:name="android.permission.health.READ_BODY_MASS_INDEX"/>
     <uses-permission android:name="android.permission.health.READ_BODY_WATER_MASS"/>
     <uses-permission android:name="android.permission.health.READ_BONE_MASS"/>
     <uses-permission android:name="android.permission.health.READ_HEIGHT"/>
-    <uses-permission android:name="android.permission.health.READ_HIP_CIRCUMFERENCE"/>
     <uses-permission android:name="android.permission.health.READ_LEAN_BODY_MASS"/>
-    <uses-permission android:name="android.permission.health.READ_WAIST_CIRCUMFERENCE"/>
     <uses-permission android:name="android.permission.health.READ_WEIGHT"/>
 
     <!-- Cycle Tracking - Data related to the menstrual cycle -->

@@ -82,9 +82,16 @@ class SyncService {
     '30 days': 30,
   };
 
-  // Permission IDs that should be synced (for now only weight and height)
-  // TODO: Expand this list when ready to sync more data types
-  static const List<String> _allowedPermissionIds = ['weight', 'height'];
+  // Permission IDs that should be synced (Body Measurements category)
+  static const List<String> _allowedPermissionIds = [
+    'basal_metabolic_rate',
+    'body_fat',
+    'body_water_mass',
+    'bone_mass',
+    'height',
+    'lean_body_mass',
+    'weight',
+  ];
 
   // Large data types that should be synced one record at a time (like HCGateway)
   static const List<String> _largeDataTypes = ['SleepSession', 'Speed', 'HeartRate'];
@@ -262,10 +269,10 @@ class SyncService {
         if (showNotifications) {
           await _notificationService.cancelSyncNotification();
         }
-        onProgress?.call(SyncState.error, 'No weight/height permissions', 0, 0);
+        onProgress?.call(SyncState.error, 'No body measurement permissions', 0, 0);
         return SyncResult(
           success: false,
-          message: 'Weight and Height permissions not granted',
+          message: 'No body measurement permissions granted',
           uploadedCount: 0,
           failedCount: 0,
         );

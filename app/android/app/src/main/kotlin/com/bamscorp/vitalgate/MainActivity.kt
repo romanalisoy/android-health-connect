@@ -557,6 +557,7 @@ class MainActivity : FlutterFragmentActivity() {
                 response.records.map { record ->
                     mapOf(
                         "id" to record.metadata.id,
+                        "dataOrigin" to record.metadata.dataOrigin.packageName,
                         "time" to record.time.toEpochMilli(),
                         "weight" to record.weight.inKilograms
                     )
@@ -568,6 +569,7 @@ class MainActivity : FlutterFragmentActivity() {
                 response.records.map { record ->
                     mapOf(
                         "id" to record.metadata.id,
+                        "dataOrigin" to record.metadata.dataOrigin.packageName,
                         "time" to record.time.toEpochMilli(),
                         "height" to record.height.inMeters
                     )
@@ -578,6 +580,8 @@ class MainActivity : FlutterFragmentActivity() {
                 val response = healthConnectClient.readRecords(request)
                 response.records.map { record ->
                     mapOf(
+                        "id" to record.metadata.id,
+                        "dataOrigin" to record.metadata.dataOrigin.packageName,
                         "time" to record.time.toEpochMilli(),
                         "percentage" to record.percentage.value
                     )
@@ -588,6 +592,8 @@ class MainActivity : FlutterFragmentActivity() {
                 val response = healthConnectClient.readRecords(request)
                 response.records.map { record ->
                     mapOf(
+                        "id" to record.metadata.id,
+                        "dataOrigin" to record.metadata.dataOrigin.packageName,
                         "time" to record.time.toEpochMilli(),
                         "mass" to record.mass.inKilograms
                     )
@@ -598,6 +604,8 @@ class MainActivity : FlutterFragmentActivity() {
                 val response = healthConnectClient.readRecords(request)
                 response.records.map { record ->
                     mapOf(
+                        "id" to record.metadata.id,
+                        "dataOrigin" to record.metadata.dataOrigin.packageName,
                         "time" to record.time.toEpochMilli(),
                         "mass" to record.mass.inKilograms
                     )
@@ -608,6 +616,8 @@ class MainActivity : FlutterFragmentActivity() {
                 val response = healthConnectClient.readRecords(request)
                 response.records.map { record ->
                     mapOf(
+                        "id" to record.metadata.id,
+                        "dataOrigin" to record.metadata.dataOrigin.packageName,
                         "time" to record.time.toEpochMilli(),
                         "mass" to record.mass.inKilograms
                     )
@@ -618,6 +628,8 @@ class MainActivity : FlutterFragmentActivity() {
                 val response = healthConnectClient.readRecords(request)
                 response.records.map { record ->
                     mapOf(
+                        "id" to record.metadata.id,
+                        "dataOrigin" to record.metadata.dataOrigin.packageName,
                         "time" to record.time.toEpochMilli(),
                         "basalMetabolicRate" to record.basalMetabolicRate.inKilocaloriesPerDay
                     )
