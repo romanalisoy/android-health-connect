@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:workmanager/workmanager.dart';
 import 'package:vitalgate/core/services/auth_service.dart';
 import 'package:vitalgate/core/services/notification_service.dart';
 import 'package:vitalgate/core/services/sync_history_service.dart';
@@ -20,21 +19,6 @@ enum SyncState {
 
 /// Sync progress callback type
 typedef SyncProgressCallback = void Function(SyncState state, String message, int current, int total);
-
-/// Background sync task name
-const String backgroundSyncTask = 'com.bamscorp.vitalgate.backgroundSync';
-
-/// Callback dispatcher for WorkManager
-@pragma('vm:entry-point')
-void callbackDispatcher() {
-  Workmanager().executeTask((task, inputData) async {
-    if (task == backgroundSyncTask) {
-      final syncService = SyncService();
-      await syncService.performSync(isBackgroundSync: true);
-    }
-    return Future.value(true);
-  });
-}
 
 class SyncService {
   static final SyncService _instance = SyncService._internal();
@@ -96,37 +80,33 @@ class SyncService {
   // Large data types that should be synced one record at a time (like HCGateway)
   static const List<String> _largeDataTypes = ['SleepSession', 'Speed', 'HeartRate'];
 
-  /// Initialize WorkManager for background sync
+  /// Initialize background sync (no-op, native handles initialization)
   Future<void> initializeBackgroundSync() async {
-    await Workmanager().initialize(
-      callbackDispatcher,
-      isInDebugMode: false,
-    );
+    // Native WorkManager handles initialization automatically
   }
 
-  /// Schedule background sync based on saved interval
+  /// Schedule background sync using native Android WorkManager
   Future<void> scheduleBackgroundSync() async {
-    final interval = await getSyncInterval();
-    final hours = syncIntervalHours[interval] ?? 1;
-
-    // Cancel existing tasks
-    await Workmanager().cancelByUniqueName(backgroundSyncTask);
-
-    // Schedule new periodic task
-    await Workmanager().registerPeriodicTask(
-      backgroundSyncTask,
-      backgroundSyncTask,
-      frequency: Duration(hours: hours),
-      constraints: Constraints(
-        networkType: NetworkType.connected,
-        requiresBatteryNotLow: true,
-      ),
-    );
+    try {
+      final result = await _channel.invokeMethod<Map<dynamic, dynamic>>('scheduleBackgroundSync');
+      if (result != null && result['success'] == true) {
+        print('DEBUG: Background sync scheduled successfully');
+      } else {
+        print('DEBUG: Failed to schedule background sync: ${result?['message']}');
+      }
+    } catch (e) {
+      print('Error scheduling background sync: $e');
+    }
   }
 
   /// Cancel background sync
   Future<void> cancelBackgroundSync() async {
-    await Workmanager().cancelByUniqueName(backgroundSyncTask);
+    try {
+      await _channel.invokeMethod('cancelBackgroundSync');
+      print('DEBUG: Background sync cancelled');
+    } catch (e) {
+      print('Error cancelling background sync: $e');
+    }
   }
 
   // Settings getters/setters

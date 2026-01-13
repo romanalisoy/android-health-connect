@@ -249,6 +249,22 @@ class MainActivity : FlutterFragmentActivity() {
                         result.success(mapOf("success" to false, "error" to e.message, "data" to listOf<Map<String, Any>>()))
                     }
                 }
+                "scheduleBackgroundSync" -> {
+                    try {
+                        BackgroundSyncWorker.schedule(this)
+                        result.success(mapOf("success" to true, "message" to "Background sync scheduled"))
+                    } catch (e: Exception) {
+                        result.success(mapOf("success" to false, "message" to e.message))
+                    }
+                }
+                "cancelBackgroundSync" -> {
+                    try {
+                        BackgroundSyncWorker.cancel(this)
+                        result.success(mapOf("success" to true, "message" to "Background sync cancelled"))
+                    } catch (e: Exception) {
+                        result.success(mapOf("success" to false, "message" to e.message))
+                    }
+                }
                 else -> result.notImplemented()
             }
         }
