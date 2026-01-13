@@ -2,18 +2,11 @@ import "reflect-metadata";
 import {config} from "dotenv";
 import {randomUUID} from "crypto";
 import bcrypt from "bcrypt";
+import type {CliArgs} from "../../../types/cli";
 import AppDataSource from "../configs/datasource.config";
 import User from "../../database/entities/User";
 
 config();
-
-type CliArgs = {
-    id?: string;
-    email?: string;
-    password?: string;
-    fcmToken?: string;
-    full_name?: string;
-};
 
 const args = process.argv.slice(2);
 

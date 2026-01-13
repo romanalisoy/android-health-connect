@@ -1,10 +1,6 @@
 import {AsyncLocalStorage} from 'async_hooks'
 import {Request, Response, NextFunction} from 'express'
-
-interface Store {
-    request: Request
-    response: Response
-}
+import type {Store} from "../../../types/context";
 
 const asyncLocal = new AsyncLocalStorage<Store>()
 
@@ -62,5 +58,4 @@ export function request(): Request {
     }
 
 }
-
 

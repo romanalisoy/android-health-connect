@@ -8,12 +8,16 @@ export default class HealthController {
         this.service = new HealthService();
     }
 
-    public checkPermission = async (request: Request, response: Response) => {
+    public store = async (request: Request, response: Response) => {
         const permissionName = request.params.PERMISSION_NAME;
-        await this.service.logPermission(permissionName, request.body?? null);
+        const {data} = request.body;
+
+        const result = await this.service.store(permissionName, data);
 
         return response.status(200).json({
-            status: true
+            status: true,
+            inserted: result.inserted,
+            skipped: result.skipped
         });
     }
 }

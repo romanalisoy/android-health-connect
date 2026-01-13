@@ -21,3 +21,23 @@ export type SleepStage = {
     startTime: string;
     endTime: string;
 }
+
+export type PermissionName =
+    | 'Weight'
+    | 'Height'
+    | 'BodyFat'
+    | 'BodyWaterMass'
+    | 'BoneMass'
+    | 'LeanBodyMass'
+    | 'BasalMetabolicRate';
+
+export interface HealthItem {
+    id: string;
+    dataOrigin: string;
+    time: number;
+    weight?: number;
+    height?: number;
+    percentage?: number;
+    mass?: number;
+    basalMetabolicRate?: number;
+}

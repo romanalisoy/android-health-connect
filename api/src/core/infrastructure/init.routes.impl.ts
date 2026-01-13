@@ -1,6 +1,7 @@
 import {readdirSync} from "fs";
 import path from "path";
 import {Router, RequestHandler, Request, Response, NextFunction, Application} from 'express';
+import type {RouteHandler, Middleware} from "../../../types/routes";
 
 
 function controllerHandler(ControllerClass: new () => any, methodName: string): RequestHandler {
@@ -34,9 +35,6 @@ export function useRoutes(app: Application) {
     });
 }
 
-
-type RouteHandler = RequestHandler | [new () => any, string];
-type Middleware = RequestHandler | RequestHandler[];
 
 export class Routing {
     private readonly router: Router;
