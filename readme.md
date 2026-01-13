@@ -10,13 +10,13 @@ Android Health Connect organizes a wide array of health and fitness data into di
 
 | Data Type                  | Description                                                                                          | Is Supported |
 |----------------------------|------------------------------------------------------------------------------------------------------|--------------|
-| Basal Metabolic Rate (BMR) | The number of calories the body burns at rest.                                                       | No           |
-| Body Fat                   | The percentage of fat in the body.                                                                   | No           |
-| Body Water Mass            | The total amount of water in the body.                                                               | No           |
-| Bone Mass                  | The total mass of the skeletal system.                                                               | No           |
-| Height                     | The user's height.                                                                                   | No           |
-| Lean Body Mass             | The total mass of all non-fat tissues in the body.                                                   | No           |
-| Weight                     | The user's body weight.                                                                              | No           |
+| Basal Metabolic Rate (BMR) | The number of calories the body burns at rest.                                                       | Yes          |
+| Body Fat                   | The percentage of fat in the body.                                                                   | Yes          |
+| Body Water Mass            | The total amount of water in the body.                                                               | Yes          |
+| Bone Mass                  | The total mass of the skeletal system.                                                               | Yes          |
+| Height                     | The user's height.                                                                                   | Yes          |
+| Lean Body Mass             | The total mass of all non-fat tissues in the body.                                                   | Yes          |
+| Weight                     | The user's body weight.                                                                              | Yes          |
 
 
 </details>
