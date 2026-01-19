@@ -538,8 +538,7 @@ class _BodyStatsScreenState extends State<BodyStatsScreen> {
       crossAxisSpacing: 12,
       childAspectRatio: 2.2,
       children: [
-        _buildCompactCard('R Shoulder', _bodyStats?.rightShoulder, Icons.accessibility, false, isDark, surfaceColor, textColor, mutedColor, borderColor),
-        _buildCompactCard('L Shoulder', _bodyStats?.leftShoulder, Icons.accessibility, true, isDark, surfaceColor, textColor, mutedColor, borderColor),
+        _buildCompactCard('Shoulders', _bodyStats?.shoulders, Icons.accessibility, false, isDark, surfaceColor, textColor, mutedColor, borderColor),
         _buildCompactCard('R Bicep', _bodyStats?.rightBicep, Icons.fitness_center, false, isDark, surfaceColor, textColor, mutedColor, borderColor),
         _buildCompactCard('L Bicep', _bodyStats?.leftBicep, Icons.fitness_center, true, isDark, surfaceColor, textColor, mutedColor, borderColor),
         _buildCompactCard('R Forearm', _bodyStats?.rightForearm, Icons.pan_tool, false, isDark, surfaceColor, textColor, mutedColor, borderColor),

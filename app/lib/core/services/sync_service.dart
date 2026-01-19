@@ -80,9 +80,10 @@ class SyncService {
   // Large data types that should be synced one record at a time (like HCGateway)
   static const List<String> _largeDataTypes = ['SleepSession', 'Speed', 'HeartRate'];
 
-  /// Initialize background sync (no-op, native handles initialization)
+  /// Initialize and schedule background sync
   Future<void> initializeBackgroundSync() async {
-    // Native WorkManager handles initialization automatically
+    // Schedule background sync with current interval settings
+    await scheduleBackgroundSync();
   }
 
   /// Schedule background sync using native Android WorkManager

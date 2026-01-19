@@ -6,8 +6,7 @@ export interface BodyStatsData {
     left_arm?: number | null;
     right_forearm?: number | null;
     left_forearm?: number | null;
-    right_shoulder?: number | null;
-    left_shoulder?: number | null;
+    shoulders?: number | null;
     hips?: number | null;
     right_thigh?: number | null;
     left_thigh?: number | null;

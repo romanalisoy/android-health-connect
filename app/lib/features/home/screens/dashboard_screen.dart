@@ -10,6 +10,7 @@ import 'package:vitalgate/core/services/auth_service.dart';
 import 'package:vitalgate/core/services/sync_service.dart';
 import 'package:vitalgate/features/profile/screens/profile_screen.dart';
 
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -30,15 +31,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // User info and weather
   UserInfo? _userInfo;
   WeatherInfo? _weatherInfo;
+  BodyStats? _bodyStats;
   bool _isLoadingUserInfo = true;
   bool _isLoadingWeather = true;
+  bool _isLoadingBodyStats = true;
 
   final HealthService _healthService = HealthService();
   final AuthService _authService = AuthService();
   final SyncService _syncService = SyncService();
 
-  // Dropdown options
+  // Dropdown options (15 min is Android WorkManager minimum)
   static const List<String> _syncIntervalOptions = [
+    'Every 15 min (Minimum)',
     'Every 1 hour',
     'Every 2 hours',
     'Every 6 hours',
@@ -65,6 +69,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _initializeBackgroundSync();
     _loadUserInfo();
     _loadWeather();
+    _loadBodyStats();
   }
 
 
@@ -93,11 +98,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  /// Load body stats from API
+  Future<void> _loadBodyStats() async {
+    final stats = await _authService.getBodyStats();
+    if (mounted) {
+      setState(() {
+        _bodyStats = stats;
+        _isLoadingBodyStats = false;
+      });
+    }
+  }
+
   /// Refresh all data (pull-to-refresh)
   Future<void> _refreshData() async {
     await Future.wait([
       _loadUserInfo(),
       _loadWeather(),
+      _loadBodyStats(),
     ]);
   }
 
@@ -549,7 +566,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                 ),
                                               ),
                                             const SizedBox(width: 4),
-                                            Flexible(
+                                            Expanded(
                                               child: Text(
                                                 _weatherInfo!.weather,
                                                 style: GoogleFonts.inter(
@@ -557,7 +574,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                   fontWeight: FontWeight.w500,
                                                   color: mutedColor,
                                                 ),
-                                                overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
                                           ],
@@ -624,6 +640,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
 
                       const SizedBox(height: 24),
+
+
 
                       // Sync Config Header
                       Padding(
@@ -936,4 +954,5 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+
 }

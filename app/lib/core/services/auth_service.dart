@@ -687,8 +687,7 @@ class BodyStats {
   final double? chest;
   final double? waist;
   final double? hips;
-  final double? rightShoulder;
-  final double? leftShoulder;
+  final double? shoulders;
   final double? rightBicep;
   final double? leftBicep;
   final double? rightForearm;
@@ -706,8 +705,7 @@ class BodyStats {
     this.chest,
     this.waist,
     this.hips,
-    this.rightShoulder,
-    this.leftShoulder,
+    this.shoulders,
     this.rightBicep,
     this.leftBicep,
     this.rightForearm,
@@ -727,8 +725,7 @@ class BodyStats {
       chest: _parseNestedValue(json['chest']),
       waist: _parseNestedValue(json['waist']),
       hips: _parseNestedValue(json['hips']),
-      rightShoulder: _parseNestedValue(json['right_shoulder'] ?? json['rightShoulder']),
-      leftShoulder: _parseNestedValue(json['left_shoulder'] ?? json['leftShoulder']),
+      shoulders: _parseNestedValue(json['shoulders']),
       rightBicep: _parseNestedValue(json['right_arm'] ?? json['right_bicep'] ?? json['rightBicep']),
       leftBicep: _parseNestedValue(json['left_arm'] ?? json['left_bicep'] ?? json['leftBicep']),
       rightForearm: _parseNestedValue(json['right_forearm'] ?? json['rightForearm']),

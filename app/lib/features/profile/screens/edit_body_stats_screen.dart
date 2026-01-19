@@ -25,8 +25,7 @@ class _EditBodyStatsScreenState extends State<EditBodyStatsScreen> {
   final _hipsController = TextEditingController();
 
   // Controllers for arms & shoulders
-  final _rightShoulderController = TextEditingController();
-  final _leftShoulderController = TextEditingController();
+  final _shouldersController = TextEditingController();
   final _rightArmController = TextEditingController();
   final _leftArmController = TextEditingController();
   final _rightForearmController = TextEditingController();
@@ -51,8 +50,7 @@ class _EditBodyStatsScreenState extends State<EditBodyStatsScreen> {
       _chestController.text = stats.chest?.toStringAsFixed(1) ?? '';
       _waistController.text = stats.waist?.toStringAsFixed(1) ?? '';
       _hipsController.text = stats.hips?.toStringAsFixed(1) ?? '';
-      _rightShoulderController.text = stats.rightShoulder?.toStringAsFixed(1) ?? '';
-      _leftShoulderController.text = stats.leftShoulder?.toStringAsFixed(1) ?? '';
+      _shouldersController.text = stats.shoulders?.toStringAsFixed(1) ?? '';
       _rightArmController.text = stats.rightBicep?.toStringAsFixed(1) ?? '';
       _leftArmController.text = stats.leftBicep?.toStringAsFixed(1) ?? '';
       _rightForearmController.text = stats.rightForearm?.toStringAsFixed(1) ?? '';
@@ -70,8 +68,7 @@ class _EditBodyStatsScreenState extends State<EditBodyStatsScreen> {
     _chestController.dispose();
     _waistController.dispose();
     _hipsController.dispose();
-    _rightShoulderController.dispose();
-    _leftShoulderController.dispose();
+    _shouldersController.dispose();
     _rightArmController.dispose();
     _leftArmController.dispose();
     _rightForearmController.dispose();
@@ -101,8 +98,7 @@ class _EditBodyStatsScreenState extends State<EditBodyStatsScreen> {
     data['chest'] = parseOrZero(_chestController);
     data['waist'] = parseOrZero(_waistController);
     data['hips'] = parseOrZero(_hipsController);
-    data['right_shoulder'] = parseOrZero(_rightShoulderController);
-    data['left_shoulder'] = parseOrZero(_leftShoulderController);
+    data['shoulders'] = parseOrZero(_shouldersController);
     data['right_arm'] = parseOrZero(_rightArmController);
     data['left_arm'] = parseOrZero(_leftArmController);
     data['right_forearm'] = parseOrZero(_rightForearmController);
@@ -439,8 +435,7 @@ class _EditBodyStatsScreenState extends State<EditBodyStatsScreen> {
       crossAxisSpacing: 12,
       childAspectRatio: 2.2,
       children: [
-        _buildCompactInputCard('R Shoulder', _rightShoulderController, Icons.accessibility, false, isDark, surfaceColor, textColor, mutedColor, borderColor),
-        _buildCompactInputCard('L Shoulder', _leftShoulderController, Icons.accessibility, true, isDark, surfaceColor, textColor, mutedColor, borderColor),
+        _buildCompactInputCard('Shoulders', _shouldersController, Icons.accessibility, false, isDark, surfaceColor, textColor, mutedColor, borderColor),
         _buildCompactInputCard('R Bicep', _rightArmController, Icons.fitness_center, false, isDark, surfaceColor, textColor, mutedColor, borderColor),
         _buildCompactInputCard('L Bicep', _leftArmController, Icons.fitness_center, true, isDark, surfaceColor, textColor, mutedColor, borderColor),
         _buildCompactInputCard('R Forearm', _rightForearmController, Icons.pan_tool, false, isDark, surfaceColor, textColor, mutedColor, borderColor),

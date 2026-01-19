@@ -46,10 +46,7 @@ export default class BodyStats extends BaseEntity implements IModel {
     left_forearm: number | null;
 
     @Column({type: 'decimal', nullable: true})
-    right_shoulder: number | null;
-
-    @Column({type: 'decimal', nullable: true})
-    left_shoulder: number | null;
+    shoulders: number | null;
 
     @Column({type: 'decimal', nullable: true})
     hips: number | null;

@@ -29,9 +29,22 @@ class SyncHistoryEntry {
   int get totalRecords => successCount + failedCount;
 
   factory SyncHistoryEntry.fromJson(Map<String, dynamic> json) {
+    // Handle timestamp from both native (milliseconds) and Flutter (ISO8601 string)
+    DateTime timestamp;
+    final rawTimestamp = json['timestamp'];
+    if (rawTimestamp is int) {
+      // Native Android stores as milliseconds since epoch
+      timestamp = DateTime.fromMillisecondsSinceEpoch(rawTimestamp);
+    } else if (rawTimestamp is String) {
+      // Flutter stores as ISO8601 string
+      timestamp = DateTime.parse(rawTimestamp);
+    } else {
+      timestamp = DateTime.now();
+    }
+
     return SyncHistoryEntry(
       id: json['id'] as String,
-      timestamp: DateTime.parse(json['timestamp'] as String),
+      timestamp: timestamp,
       successCount: json['successCount'] as int,
       failedCount: json['failedCount'] as int,
       errors: (json['errors'] as List<dynamic>?)?.cast<String>() ?? [],

@@ -1,8 +1,13 @@
 package com.bamscorp.vitalgate
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
 import android.content.SharedPreferences
+import android.content.pm.ServiceInfo
+import android.os.Build
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.request.ReadRecordsRequest
@@ -29,6 +34,8 @@ class BackgroundSyncWorker(
         private const val TAG = "BackgroundSyncWorker"
         private const val WORK_NAME = "health_background_sync"
         private const val PREFS_NAME = "FlutterSharedPreferences"
+        private const val NOTIFICATION_CHANNEL_ID = "health_sync_channel"
+        private const val NOTIFICATION_ID = 1001
 
         // Data types to sync (Body Measurements)
         private val SYNC_DATA_TYPES = listOf(
@@ -46,29 +53,39 @@ class BackgroundSyncWorker(
             "30 days" to 30
         )
 
-        // Sync interval options in hours
-        private val SYNC_INTERVAL_HOURS = mapOf(
-            "Every 1 hour" to 1L,
-            "Every 2 hours" to 2L,
-            "Every 6 hours" to 6L,
-            "Every 12 hours" to 12L,
-            "Once a day" to 24L
+        // Sync interval options in minutes (15 min is Android minimum)
+        private val SYNC_INTERVAL_MINUTES = mapOf(
+            "Every 15 min (Minimum)" to 15L,
+            "Every 1 hour" to 60L,
+            "Every 2 hours" to 120L,
+            "Every 6 hours" to 360L,
+            "Every 12 hours" to 720L,
+            "Once a day" to 1440L
         )
 
         fun schedule(context: Context) {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             val intervalKey = prefs.getString("flutter.sync_interval", "Every 1 hour") ?: "Every 1 hour"
-            val intervalHours = SYNC_INTERVAL_HOURS[intervalKey] ?: 1L
+            val intervalMinutes = SYNC_INTERVAL_MINUTES[intervalKey] ?: 60L
 
-            Log.d(TAG, "Scheduling background sync every $intervalHours hours")
+            Log.d(TAG, "Scheduling background sync every $intervalMinutes minutes")
 
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
-                .setRequiresBatteryNotLow(true)
+                .setRequiresBatteryNotLow(false) // Allow sync even on low battery for testing
                 .build()
 
+            // First, trigger an immediate one-time sync for testing
+            val immediateRequest = OneTimeWorkRequestBuilder<BackgroundSyncWorker>()
+                .setConstraints(constraints)
+                .build()
+
+            WorkManager.getInstance(context).enqueue(immediateRequest)
+            Log.d(TAG, "Immediate sync triggered")
+
+            // Then schedule periodic sync
             val syncRequest = PeriodicWorkRequestBuilder<BackgroundSyncWorker>(
-                intervalHours, TimeUnit.HOURS
+                intervalMinutes, TimeUnit.MINUTES
             )
                 .setConstraints(constraints)
                 .setBackoffCriteria(
@@ -101,6 +118,14 @@ class BackgroundSyncWorker(
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         Log.d(TAG, "Starting background sync...")
+
+        // Show foreground notification to keep the process alive
+        try {
+            setForeground(createForegroundInfo())
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to set foreground: ${e.message}")
+            // Continue anyway - on older Android versions this might fail
+        }
 
         try {
             val prefs = applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -345,6 +370,44 @@ class BackgroundSyncWorker(
 
         } catch (e: Exception) {
             Log.e(TAG, "Error logging sync result: ${e.message}")
+        }
+    }
+
+    private fun createForegroundInfo(): ForegroundInfo {
+        createNotificationChannel()
+
+        val notification = NotificationCompat.Builder(applicationContext, NOTIFICATION_CHANNEL_ID)
+            .setContentTitle("VitalGate")
+            .setContentText("Syncing health data...")
+            .setSmallIcon(android.R.drawable.ic_popup_sync)
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
+
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ForegroundInfo(
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            )
+        } else {
+            ForegroundInfo(NOTIFICATION_ID, notification)
+        }
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                NOTIFICATION_CHANNEL_ID,
+                "Health Data Sync",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Background health data synchronization"
+                setShowBadge(false)
+            }
+
+            val notificationManager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
         }
     }
 }
