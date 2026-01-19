@@ -639,6 +639,41 @@ class AuthService {
     }
   }
 
+  /// Get body stats history for a specific field
+  /// GET /api/v1/body-stats/history/:field?period=:period
+  Future<BodyStatsHistory?> getBodyStatsHistory(String field, {String period = 'month'}) async {
+    try {
+      final baseUrl = await getBaseUrl();
+      final accessToken = await getAccessToken();
+
+      if (baseUrl == null) return null;
+      if (accessToken == null) return null;
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/v1/body-stats/history/$field?period=$period'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        final historyData = data['data'] ?? data;
+        return BodyStatsHistory.fromJson(historyData);
+      } else if (response.statusCode == 401) {
+        final newToken = await refreshToken();
+        if (newToken != null) {
+          return getBodyStatsHistory(field, period: period);
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching body stats history: $e');
+      return null;
+    }
+  }
+
   /// Update body stats
   /// PUT /api/v1/body-stats
   Future<AuthResult> updateBodyStats(Map<String, double> data) async {
@@ -788,5 +823,92 @@ class BodyStats {
     if (bmiValue < 25) return 'Normal';
     if (bmiValue < 30) return 'Overweight';
     return 'Obese';
+  }
+}
+
+/// Body Stats History data model
+class BodyStatsHistory {
+  final String field;
+  final String period;
+  final List<BodyStatsHistoryEntry> history;
+
+  BodyStatsHistory({
+    required this.field,
+    required this.period,
+    required this.history,
+  });
+
+  factory BodyStatsHistory.fromJson(Map<String, dynamic> json) {
+    final historyList = json['history'] as List? ?? [];
+    return BodyStatsHistory(
+      field: json['field'] ?? '',
+      period: json['period'] ?? 'month',
+      history: historyList.map((e) => BodyStatsHistoryEntry.fromJson(e)).toList(),
+    );
+  }
+
+  /// Calculate average value from history
+  double? get average {
+    if (history.isEmpty) return null;
+    final sum = history.fold<double>(0, (sum, e) => sum + e.value);
+    return sum / history.length;
+  }
+
+  /// Calculate total change (newest - oldest)
+  double? get totalChange {
+    if (history.length < 2) return null;
+    // History is assumed newest first, so first - last
+    return history.first.value - history.last.value;
+  }
+
+  /// Calculate change percentage
+  double? get changePercentage {
+    if (history.length < 2) return null;
+    final oldestValue = history.last.value;
+    if (oldestValue == 0) return null;
+    final change = totalChange;
+    if (change == null) return null;
+    return (change / oldestValue) * 100;
+  }
+
+  /// Get the latest value
+  double? get latestValue {
+    if (history.isEmpty) return null;
+    return history.first.value;
+  }
+}
+
+/// Single history entry
+class BodyStatsHistoryEntry {
+  final DateTime recordDate;
+  final double value;
+
+  BodyStatsHistoryEntry({
+    required this.recordDate,
+    required this.value,
+  });
+
+  factory BodyStatsHistoryEntry.fromJson(Map<String, dynamic> json) {
+    DateTime date;
+    final dateValue = json['record_date'];
+    if (dateValue is String) {
+      // Handle both "2026-01-19" and "2026-01-19T00:00:00.000Z" formats
+      date = DateTime.tryParse(dateValue) ?? DateTime.now();
+    } else {
+      date = DateTime.now();
+    }
+
+    double value = 0;
+    final rawValue = json['value'];
+    if (rawValue is num) {
+      value = rawValue.toDouble();
+    } else if (rawValue is String) {
+      value = double.tryParse(rawValue) ?? 0;
+    }
+
+    return BodyStatsHistoryEntry(
+      recordDate: date,
+      value: value,
+    );
   }
 }

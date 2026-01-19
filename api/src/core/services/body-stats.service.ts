@@ -1,5 +1,4 @@
 import {randomUUID} from 'crypto';
-import {MoreThanOrEqual} from 'typeorm';
 import BodyStats from "../../database/entities/BodyStats";
 import AppDataSource from "../configs/datasource.config";
 import {BodyStatsData, BodyStatField, HistoryPeriod, BodyStatHistoryItem, LatestBodyStats} from "../../../types/body-stats";
@@ -77,14 +76,12 @@ export default class BodyStatsService {
     ): Promise<BodyStatHistoryItem[]> {
         const startDate = this.getStartDate(period);
 
-        let whereCondition: any = {user_id: userId};
-
-        if (startDate) {
-            whereCondition.record_date = MoreThanOrEqual(startDate);
-        }
-
-        const records = await BodyStats.find({
-            where: whereCondition,
+        // Query Mongo with $gte on ISO date strings to avoid in-memory filtering cost
+        const mongoRepo = AppDataSource.getMongoRepository(BodyStats);
+        const records = await mongoRepo.find({
+            where: startDate
+                ? {user_id: userId, record_date: {$gte: startDate}}
+                : {user_id: userId},
             order: {record_date: 'ASC'}
         });
 

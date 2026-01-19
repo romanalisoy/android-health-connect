@@ -70,29 +70,32 @@ class BackgroundSyncWorker(
 
             Log.d(TAG, "Scheduling background sync every $intervalMinutes minutes")
 
+            // Minimal constraints for better reliability
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
-                .setRequiresBatteryNotLow(false) // Allow sync even on low battery for testing
                 .build()
 
-            // First, trigger an immediate one-time sync for testing
+            // First, trigger an immediate one-time sync with expedited flag
             val immediateRequest = OneTimeWorkRequestBuilder<BackgroundSyncWorker>()
                 .setConstraints(constraints)
+                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                .addTag("immediate_sync")
                 .build()
 
             WorkManager.getInstance(context).enqueue(immediateRequest)
-            Log.d(TAG, "Immediate sync triggered")
+            Log.d(TAG, "Immediate expedited sync triggered")
 
-            // Then schedule periodic sync
+            // Then schedule periodic sync with flexible window
             val syncRequest = PeriodicWorkRequestBuilder<BackgroundSyncWorker>(
-                intervalMinutes, TimeUnit.MINUTES
+                intervalMinutes, TimeUnit.MINUTES,
+                5, TimeUnit.MINUTES // Flex interval - can run 5 min before scheduled time
             )
                 .setConstraints(constraints)
                 .setBackoffCriteria(
-                    BackoffPolicy.EXPONENTIAL,
-                    WorkRequest.MIN_BACKOFF_MILLIS,
-                    TimeUnit.MILLISECONDS
+                    BackoffPolicy.LINEAR,
+                    30, TimeUnit.SECONDS // Start retry after 30 seconds
                 )
+                .addTag("periodic_sync")
                 .build()
 
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
@@ -117,14 +120,21 @@ class BackgroundSyncWorker(
         .build()
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Starting background sync...")
+        Log.d(TAG, "Starting background sync... (attempt ${runAttemptCount + 1})")
 
-        // Show foreground notification to keep the process alive
+        // Show foreground notification to keep the process alive - MANDATORY
         try {
             setForeground(createForegroundInfo())
+            Log.d(TAG, "Foreground notification set successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to set foreground: ${e.message}")
-            // Continue anyway - on older Android versions this might fail
+            // Retry up to 3 times if foreground fails
+            if (runAttemptCount < 3) {
+                Log.d(TAG, "Will retry setting foreground...")
+                return@withContext Result.retry()
+            }
+            // After 3 attempts, continue without foreground (best effort)
+            Log.w(TAG, "Proceeding without foreground after ${runAttemptCount + 1} attempts")
         }
 
         try {
@@ -373,15 +383,21 @@ class BackgroundSyncWorker(
         }
     }
 
+    // Required for expedited work
+    override suspend fun getForegroundInfo(): ForegroundInfo {
+        return createForegroundInfo()
+    }
+
     private fun createForegroundInfo(): ForegroundInfo {
         createNotificationChannel()
 
         val notification = NotificationCompat.Builder(applicationContext, NOTIFICATION_CHANNEL_ID)
             .setContentTitle("VitalGate")
             .setContentText("Syncing health data...")
-            .setSmallIcon(android.R.drawable.ic_popup_sync)
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .build()
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
