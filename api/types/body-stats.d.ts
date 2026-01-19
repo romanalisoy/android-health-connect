@@ -47,7 +47,10 @@ export type BodyStatField =
     | 'right_thigh'
     | 'left_thigh'
     | 'right_calve'
-    | 'left_calve';
+    | 'left_calve'
+    | 'weight'
+    | 'height'
+    | 'bmi';
 
 export type HistoryPeriod = 'month' | 'year' | 'all';
 
@@ -70,4 +73,7 @@ export interface LatestBodyStats {
     left_thigh: { value: number | null; record_date: string | null };
     right_calve: { value: number | null; record_date: string | null };
     left_calve: { value: number | null; record_date: string | null };
+    weight: { value: number | null; record_date: string | null };
+    height: { value: number | null; record_date: string | null };
+    bmi: { value: number | null; record_date: string | null };
 }
