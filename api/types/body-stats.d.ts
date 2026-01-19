@@ -24,8 +24,7 @@ export interface BodyStatsResponse {
     left_arm: number | null;
     right_forearm: number | null;
     left_forearm: number | null;
-    right_shoulder: number | null;
-    left_shoulder: number | null;
+    shoulders: number | null;
     hips: number | null;
     right_thigh: number | null;
     left_thigh: number | null;
@@ -43,8 +42,7 @@ export type BodyStatField =
     | 'left_arm'
     | 'right_forearm'
     | 'left_forearm'
-    | 'right_shoulder'
-    | 'left_shoulder'
+    | 'shoulders'
     | 'hips'
     | 'right_thigh'
     | 'left_thigh'
@@ -66,8 +64,7 @@ export interface LatestBodyStats {
     left_arm: { value: number | null; record_date: string | null };
     right_forearm: { value: number | null; record_date: string | null };
     left_forearm: { value: number | null; record_date: string | null };
-    right_shoulder: { value: number | null; record_date: string | null };
-    left_shoulder: { value: number | null; record_date: string | null };
+    shoulders: { value: number | null; record_date: string | null };
     hips: { value: number | null; record_date: string | null };
     right_thigh: { value: number | null; record_date: string | null };
     left_thigh: { value: number | null; record_date: string | null };

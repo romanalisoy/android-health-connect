@@ -6,7 +6,7 @@ import {BodyStatsData, BodyStatField, HistoryPeriod, BodyStatHistoryItem, Latest
 
 const BODY_STAT_FIELDS: BodyStatField[] = [
     'waist', 'neck', 'chest', 'right_arm', 'left_arm',
-    'right_forearm', 'left_forearm', 'right_shoulder', 'left_shoulder',
+    'right_forearm', 'left_forearm', 'shoulders',
     'hips', 'right_thigh', 'left_thigh', 'right_calve', 'left_calve'
 ];
 
