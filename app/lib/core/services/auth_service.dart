@@ -623,8 +623,12 @@ class AuthService {
         // Handle both direct object and nested data object
         final statsData = data['data'] ?? data;
         print('DEBUG statsData: $statsData');
+        print('DEBUG shoulders raw: ${statsData['shoulders']}');
+        print('DEBUG right_shoulder raw: ${statsData['right_shoulder']}');
+        print('DEBUG left_shoulder raw: ${statsData['left_shoulder']}');
         final bodyStats = BodyStats.fromJson(statsData);
         print('DEBUG parsed weight: ${bodyStats.weight}, height: ${bodyStats.height}');
+        print('DEBUG parsed shoulders: ${bodyStats.shoulders}');
         return bodyStats;
       } else if (response.statusCode == 401) {
         final newToken = await refreshToken();
@@ -717,7 +721,8 @@ class AuthService {
 /// Body Stats data model
 class BodyStats {
   final double? weight;
-  final double? height;
+  final double? _heightInMeters; // Height comes in meters from API
+  final double? _bmiFromApi; // BMI from API
   final double? neck;
   final double? chest;
   final double? waist;
@@ -735,7 +740,8 @@ class BodyStats {
 
   BodyStats({
     this.weight,
-    this.height,
+    double? height,
+    double? bmiFromApi,
     this.neck,
     this.chest,
     this.waist,
@@ -750,11 +756,16 @@ class BodyStats {
     this.rightCalve,
     this.leftCalve,
     this.updatedAt,
-  });
+  })  : _heightInMeters = height,
+        _bmiFromApi = bmiFromApi;
+
+  /// Height in centimeters (converted from meters)
+  double? get height => _heightInMeters != null ? _heightInMeters * 100 : null;
 
   factory BodyStats.fromJson(Map<String, dynamic> json) {
     return BodyStats(
       weight: _parseNestedValue(json['weight']),
+      bmiFromApi: _parseNestedValue(json['bmi']),
       height: _parseNestedValue(json['height']),
       neck: _parseNestedValue(json['neck']),
       chest: _parseNestedValue(json['chest']),
@@ -808,11 +819,13 @@ class BodyStats {
     return null;
   }
 
-  /// Calculate BMI from weight (kg) and height (cm)
+  /// Get BMI - uses API value if available, otherwise calculates from weight and height
   double? get bmi {
-    if (weight == null || height == null || height == 0) return null;
-    final heightInMeters = height! / 100;
-    return weight! / (heightInMeters * heightInMeters);
+    // Use API value first
+    if (_bmiFromApi != null) return _bmiFromApi;
+    // Fallback to calculation if weight and height are available
+    if (weight == null || _heightInMeters == null || _heightInMeters == 0) return null;
+    return weight! / (_heightInMeters * _heightInMeters);
   }
 
   /// Get BMI category
@@ -830,13 +843,28 @@ class BodyStats {
 class BodyStatsHistory {
   final String field;
   final String period;
-  final List<BodyStatsHistoryEntry> history;
+  final List<BodyStatsHistoryEntry> _rawHistory;
 
   BodyStatsHistory({
     required this.field,
     required this.period,
-    required this.history,
-  });
+    required List<BodyStatsHistoryEntry> history,
+  }) : _rawHistory = history;
+
+  /// Check if this field needs meter to cm conversion
+  bool get _needsConversion => field == 'height';
+
+  /// Conversion multiplier (meters to cm)
+  double get _conversionMultiplier => _needsConversion ? 100.0 : 1.0;
+
+  /// Get history with converted values if needed
+  List<BodyStatsHistoryEntry> get history {
+    if (!_needsConversion) return _rawHistory;
+    return _rawHistory.map((e) => BodyStatsHistoryEntry(
+      recordDate: e.recordDate,
+      value: e.value * _conversionMultiplier,
+    )).toList();
+  }
 
   factory BodyStatsHistory.fromJson(Map<String, dynamic> json) {
     final historyList = json['history'] as List? ?? [];

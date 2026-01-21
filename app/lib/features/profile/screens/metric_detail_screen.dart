@@ -23,6 +23,7 @@ class FieldConfig {
 const Map<String, FieldConfig> fieldConfigs = {
   'weight': FieldConfig(displayName: 'Weight', unit: 'kg', icon: Icons.monitor_weight_outlined),
   'height': FieldConfig(displayName: 'Height', unit: 'cm', icon: Icons.height),
+  'bmi': FieldConfig(displayName: 'BMI', unit: '', icon: Icons.speed),
   'neck': FieldConfig(displayName: 'Neck', unit: 'cm', icon: Icons.person_outline),
   'chest': FieldConfig(displayName: 'Chest', unit: 'cm', icon: Icons.checkroom_outlined),
   'waist': FieldConfig(displayName: 'Waist', unit: 'cm', icon: Icons.straighten),
@@ -37,6 +38,9 @@ const Map<String, FieldConfig> fieldConfigs = {
   'right_calve': FieldConfig(displayName: 'Right Calve', unit: 'cm', icon: Icons.directions_walk),
   'left_calve': FieldConfig(displayName: 'Left Calve', unit: 'cm', icon: Icons.directions_walk),
 };
+
+/// Fields where increase is bad (red) and decrease is good (green)
+const Set<String> inverseColorFields = {'weight', 'waist', 'bmi'};
 
 class MetricDetailScreen extends StatefulWidget {
   final String field;
@@ -60,6 +64,22 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
   FieldConfig get _fieldConfig =>
       fieldConfigs[widget.field] ??
       FieldConfig(displayName: widget.field, unit: 'cm', icon: Icons.straighten);
+
+  /// Check if this field uses inverse color logic (increase = bad, decrease = good)
+  bool get _useInverseColors => inverseColorFields.contains(widget.field);
+
+  /// Get color for change value based on field type
+  Color _getChangeColor(double? changeValue, Color defaultColor) {
+    if (changeValue == null || changeValue == 0) return defaultColor;
+
+    if (_useInverseColors) {
+      // For weight, waist, BMI: increase is bad (red), decrease is good (green)
+      return changeValue > 0 ? Colors.red : Colors.green;
+    } else {
+      // For other metrics: increase is good (green), decrease is bad (red)
+      return changeValue > 0 ? Colors.green : Colors.red;
+    }
+  }
 
   @override
   void initState() {
@@ -149,7 +169,6 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
           : _error != null
               ? _buildErrorState(textColor, mutedColor)
               : _buildContent(isDark, surfaceColor, textColor, mutedColor, borderColor),
-      bottomNavigationBar: _buildAddButton(isDark),
     );
   }
 
@@ -224,7 +243,7 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
             // History Log
             _buildHistorySection(isDark, surfaceColor, textColor, mutedColor, borderColor, hasData),
 
-            const SizedBox(height: 100), // Space for bottom button
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -296,6 +315,7 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
     final changePercent = _history?.changePercentage;
     final isPositive = changePercent != null && changePercent > 0;
     final isNegative = changePercent != null && changePercent < 0;
+    final changeColor = _getChangeColor(changePercent, mutedColor);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -343,17 +363,18 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
                             color: textColor,
                           ),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 6, left: 4),
-                          child: Text(
-                            _fieldConfig.unit,
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: mutedColor,
+                        if (_fieldConfig.unit.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 6, left: 4),
+                            child: Text(
+                              _fieldConfig.unit,
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: mutedColor,
+                              ),
                             ),
                           ),
-                        ),
                       ],
                     ),
                   ],
@@ -362,11 +383,7 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: isPositive
-                          ? Colors.green.withOpacity(0.1)
-                          : isNegative
-                              ? Colors.red.withOpacity(0.1)
-                              : mutedColor.withOpacity(0.1),
+                      color: changeColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -379,11 +396,7 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
                                   ? Icons.trending_down
                                   : Icons.trending_flat,
                           size: 16,
-                          color: isPositive
-                              ? Colors.green
-                              : isNegative
-                                  ? Colors.red
-                                  : mutedColor,
+                          color: changeColor,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -391,11 +404,7 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: isPositive
-                                ? Colors.green
-                                : isNegative
-                                    ? Colors.red
-                                    : mutedColor,
+                            color: changeColor,
                           ),
                         ),
                       ],
@@ -631,12 +640,8 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
     Color borderColor,
   ) {
     Color valueColor = textColor;
-    if (changeValue != null) {
-      if (changeValue > 0) {
-        valueColor = Colors.green;
-      } else if (changeValue < 0) {
-        valueColor = Colors.red;
-      }
+    if (changeValue != null && changeValue != 0) {
+      valueColor = _getChangeColor(changeValue, textColor);
     }
 
     return Container(
@@ -842,204 +847,6 @@ class _MetricDetailScreenState extends State<MetricDetailScreen> {
       return 'Yesterday, ${DateFormat('hh:mm a').format(date)}';
     } else {
       return DateFormat('MMM d, hh:mm a').format(date);
-    }
-  }
-
-  Widget _buildAddButton(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
-      ),
-      child: SafeArea(
-        child: Container(
-          width: double.infinity,
-          height: 56,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AppColors.primary, Color(0xFF6E99F5)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withOpacity(0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: _showAddRecordBottomSheet,
-              borderRadius: BorderRadius.circular(16),
-              child: Center(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.add, color: Colors.white, size: 22),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Add New Record',
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showAddRecordBottomSheet() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surfaceColor = isDark ? AppColors.surfaceDark : Colors.white;
-    final textColor = isDark ? Colors.white : AppColors.textLight;
-    final mutedColor = isDark ? AppColors.textMuted : const Color(0xFF64748B);
-    final borderColor = isDark ? const Color(0xFF2C2F35) : const Color(0xFFE2E8F0);
-
-    final controller = TextEditingController();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: surfaceColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: borderColor,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Add ${_fieldConfig.displayName}',
-                style: GoogleFonts.inter(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: textColor,
-                ),
-              ),
-              const SizedBox(height: 20),
-              Container(
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF2C2F35) : const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: borderColor),
-                ),
-                child: TextField(
-                  controller: controller,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  autofocus: true,
-                  style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: textColor,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'Enter value',
-                    hintStyle: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w400,
-                      color: mutedColor,
-                    ),
-                    suffixText: _fieldConfig.unit,
-                    suffixStyle: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: mutedColor,
-                    ),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.all(16),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final value = double.tryParse(controller.text);
-                    if (value != null) {
-                      Navigator.pop(context);
-                      await _saveNewRecord(value);
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    'Save',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _saveNewRecord(double value) async {
-    // Create data map with the field
-    final data = <String, double>{widget.field: value};
-
-    final result = await _authService.updateBodyStats(data);
-
-    if (mounted) {
-      if (result.success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.message),
-            backgroundColor: Colors.green,
-          ),
-        );
-        // Refresh history
-        _loadHistory();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result.message),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
     }
   }
 }

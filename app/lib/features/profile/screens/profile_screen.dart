@@ -373,6 +373,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 mutedColor: mutedColor,
                                 borderColor: borderColor,
                                 showBorder: true,
+                                badge: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    'Unavailable',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.red,
+                                    ),
+                                  ),
+                                ),
                                 onTap: () {
                                   Navigator.push(
                                     context,
@@ -579,6 +594,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required Color borderColor,
     required bool showBorder,
     required VoidCallback onTap,
+    Widget? badge,
   }) {
     return Material(
       color: Colors.transparent,
@@ -616,13 +632,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: textColor,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          title,
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: textColor,
+                          ),
+                        ),
+                        if (badge != null) ...[
+                          const SizedBox(width: 8),
+                          badge,
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 2),
                     Text(
